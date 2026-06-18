@@ -1,0 +1,27 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/player/player",
+    "pages/record/record"
+  ],
+  "window": {
+    "navigationBarTitleText": "文档朗读助手",
+    "navigationBarBackgroundColor": "#4A90D9",
+    "navigationBarTextStyle": "white"
+  },
+  "requiredBackgroundModes": ["audio"],
+  "tabBar": {
+    "color": "#999",
+    "selectedColor": "#4A90D9",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "听文档"
+      },
+      {
+        "pagePath": "pages/record/record",
+        "text": "录音转文字"
+      }
+    ]
+  }
+}

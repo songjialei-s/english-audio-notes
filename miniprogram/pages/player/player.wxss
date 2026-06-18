@@ -1,0 +1,72 @@
+.container {
+  padding: 30rpx;
+}
+
+.note-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 40rpx;
+}
+
+.segment-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 40rpx;
+  margin-bottom: 40rpx;
+}
+
+.segment-label {
+  display: block;
+  font-size: 24rpx;
+  color: #4A90D9;
+  margin-bottom: 20rpx;
+}
+
+.segment-text {
+  display: block;
+  font-size: 30rpx;
+  line-height: 1.8;
+  color: #333;
+}
+
+.player {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+
+.time-bar {
+  display: flex;
+  justify-content: space-between;
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 30rpx;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30rpx;
+}
+
+.ctrl-btn {
+  font-size: 26rpx;
+  padding: 0 30rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 36rpx;
+  background: #f0f0f0;
+  color: #666;
+}
+
+.play-btn {
+  width: 160rpx;
+  height: 160rpx;
+  line-height: 160rpx;
+  border-radius: 50%;
+  background: #4A90D9;
+  color: #fff;
+  font-size: 34rpx;
+}

@@ -1,0 +1,35 @@
+<view class="container">
+  <view class="header">
+    <text class="title">听文档</text>
+    <text class="subtitle">上传PDF，AI朗读你的笔记</text>
+  </view>
+
+  <button class="upload-btn" bindtap="uploadPDF" disabled="{{uploading}}">
+    {{uploading ? '识别中...' : '+ 导入PDF文档'}}
+  </button>
+
+  <view class="note-list" wx:if="{{notes.length > 0}}">
+    <view class="note-item" wx:for="{{notes}}" wx:key="id">
+      <view class="note-info" bindtap="playNote" data-id="{{item.id}}">
+        <text class="note-name">{{item.name}}</text>
+        <text class="note-date">{{item.createdAt}}</text>
+      </view>
+      <view class="note-actions">
+        <button class="play-btn" bindtap="playNote" data-id="{{item.id}}">播放</button>
+        <button class="delete-btn" bindtap="deleteNote" data-id="{{item.id}}">删除</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:else>
+    <text>暂无文档，点击上方按钮导入</text>
+  </view>
+
+  <view class="loading-mask" wx:if="{{uploading}}">
+    <view class="loading-box">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">识别中，请耐心等待...</text>
+      <button class="cancel-btn" bindtap="cancelUpload">取消</button>
+    </view>
+  </view>
+</view>

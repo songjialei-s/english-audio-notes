@@ -1,0 +1,23 @@
+<view class="container" wx:if="{{note}}">
+  <view class="note-title">{{note.name}}</view>
+
+  <view class="segment-card">
+    <text class="segment-label">第 {{currentSegment + 1}} / {{note.segments.length}} 段</text>
+    <text class="segment-text">{{note.segments[currentSegment].text}}</text>
+  </view>
+
+  <view class="player">
+    <view class="time-bar">
+      <text>{{currentTime}}</text>
+      <text>{{duration}}</text>
+    </view>
+
+    <view class="controls">
+      <button class="ctrl-btn" bindtap="prevSegment">上一段</button>
+      <button class="play-btn" bindtap="togglePlay">
+        {{isPlaying ? '暂停' : '播放'}}
+      </button>
+      <button class="ctrl-btn" bindtap="nextSegment">下一段</button>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,34 @@
+<view class="container">
+  <view class="lang-picker">
+    <text>识别语言：</text>
+    <picker range="{{languages}}" range-key="name" bindchange="changeLanguage">
+      <text class="lang-value">{{currentLang}}</text>
+    </picker>
+  </view>
+
+  <view class="record-area">
+    <view class="timer">{{durationText}}</view>
+
+    <view class="btn-group">
+      <button wx:if="{{!isRecording}}" class="record-btn" bindtap="startRecord">开始录音</button>
+      <button wx:if="{{isRecording}}" class="record-btn recording" bindtap="stopRecord">停止</button>
+
+      <button wx:if="{{isRecording && !isPaused}}" class="pause-btn" bindtap="pauseRecord">暂停</button>
+      <button wx:if="{{isRecording && isPaused}}" class="resume-btn" bindtap="resumeRecord">继续</button>
+    </view>
+  </view>
+
+  <view class="result-area" wx:if="{{tempFilePath}}">
+    <view class="section-title">录音结果</view>
+    <view class="audio-bar">
+      <button class="small-btn" bindtap="playAudio">播放录音</button>
+      <button class="small-btn primary" bindtap="transcribe" loading="{{uploading}}">转为文字</button>
+    </view>
+  </view>
+
+  <view class="text-area" wx:if="{{resultText}}">
+    <view class="section-title">识别结果</view>
+    <text class="result-text">{{resultText}}</text>
+    <button class="copy-btn" bindtap="copyText">复制文字</button>
+  </view>
+</view>
