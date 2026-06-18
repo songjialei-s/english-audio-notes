@@ -29,6 +29,7 @@ Page({
           url: app.globalData.baseUrl + '/upload',
           filePath: file.path,
           name: 'file',
+          timeout: 600000,
           success: (uploadRes) => {
             this.setData({ uploading: false })
             const data = JSON.parse(uploadRes.data)

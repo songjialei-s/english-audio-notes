@@ -3,27 +3,23 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from pdf模块 import extract_text
+from backend.text_corrector import correct_ocr_text
 
 
-def split_into_segments(text: str, max_len: int = 500) -> list[str]:
-    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+def split_into_segments(text: str, max_len: int = 200) -> list[str]:
+    corrected = correct_ocr_text(text)
+    lines = [l.strip() for l in corrected.split("\n") if l.strip()]
+
     segments = []
-    for para in paragraphs:
-        if len(para) <= max_len:
-            segments.append(para)
+    buf = ""
+    for line in lines:
+        if len(buf) + len(line) + 1 <= max_len:
+            buf += line + "\n"
         else:
-            sentences = para.replace("。", ".").replace("？", "?").replace("！", "!").split(".")
-            buf = ""
-            for sent in sentences:
-                sent = sent.strip()
-                if not sent:
-                    continue
-                if len(buf) + len(sent) < max_len:
-                    buf += sent + ". "
-                else:
-                    if buf:
-                        segments.append(buf.strip())
-                    buf = sent + ". "
             if buf:
                 segments.append(buf.strip())
+            buf = line + "\n"
+    if buf:
+        segments.append(buf.strip())
+
     return segments

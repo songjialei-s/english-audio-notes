@@ -1,6 +1,7 @@
 import fitz
 from pathlib import Path
 from rapidocr_onnxruntime import RapidOCR
+from backend.volcano_llm import correct_with_llm
 
 ocr_engine = RapidOCR()
 
@@ -12,7 +13,7 @@ def extract_text_pymupdf(pdf_path: str) -> str:
     return text.strip()
 
 
-def ocr_pdf(pdf_path: str, max_pages: int = 1) -> str:
+def ocr_pdf(pdf_path: str, max_pages: int = 10) -> str:
     doc = fitz.open(pdf_path)
     all_text = []
     total = min(len(doc), max_pages)
@@ -28,7 +29,7 @@ def ocr_pdf(pdf_path: str, max_pages: int = 1) -> str:
     return "\n".join(all_text)
 
 
-def extract_text(pdf_path: str) -> str:
+def extract_text(pdf_path: str, use_llm: bool = True) -> str:
     path = Path(pdf_path)
     if not path.exists():
         raise FileNotFoundError(f"PDF not found: {pdf_path}")
@@ -37,7 +38,14 @@ def extract_text(pdf_path: str) -> str:
     if text:
         return text
 
-    return ocr_pdf(str(path))
+    raw_ocr = ocr_pdf(str(path))
+
+    if use_llm and raw_ocr:
+        corrected = correct_with_llm(raw_ocr)
+        if corrected and not corrected.startswith("[LLM Error"):
+            return corrected
+
+    return raw_ocr
 
 
 if __name__ == "__main__":
