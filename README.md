@@ -27,6 +27,11 @@
 - 上传取消按钮
 - README版本记录
 
+### v1.3 - LLM纠错
+- DeepSeek API智能纠错（手写英文识别修正）
+- 词组格式优化（correlate with sth等保持完整）
+- 本地纠错模块（备用方案）
+
 ## 快速开始
 
 ```bash
@@ -47,6 +52,7 @@ python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 | 前端 | 微信小程序 |
 | 后端 | Python FastAPI |
 | PDF提取 | PyMuPDF + RapidOCR |
+| LLM纠错 | DeepSeek API |
 | TTS | pyttsx3 |
 | STT | SpeechRecognition |
 
@@ -54,10 +60,12 @@ python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 
 ```
 english-audio-notes/
-├── pdf模块.py              # PDF提取（文字+OCR）
+├── pdf模块.py              # PDF提取（文字+OCR+LLM纠错）
 ├── backend/
 │   ├── main.py             # API服务
 │   ├── pdf_parser.py       # 文字分段
+│   ├── volcano_llm.py      # DeepSeek LLM纠错
+│   ├── text_corrector.py   # 本地纠错（备用）
 │   ├── tts.py              # 文字转语音
 │   └── stt.py              # 语音转文字
 ├── miniprogram/
