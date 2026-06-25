@@ -9,8 +9,8 @@ Page({
     durationText: '00:00',
     tempFilePath: '',
     resultText: '',
-    language: 'zh-CN',
-    currentLang: '中文',
+    language: 'auto',
+    currentLang: '自动检测',
     languages: [],
     uploading: false
   },
@@ -89,6 +89,23 @@ Page({
     recorderManager.stop()
   },
 
+  chooseAudio() {
+    wx.chooseMessageFile({
+      count: 1,
+      type: 'file',
+      extension: ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'],
+      success: (res) => {
+        const file = res.tempFiles[0]
+        this.setData({
+          tempFilePath: file.path,
+          resultText: '',
+          durationText: this.formatTime(file.size > 0 ? 0 : 0)
+        })
+        wx.showToast({ title: '已选择文件', icon: 'success' })
+      }
+    })
+  },
+
   transcribe() {
     if (!this.data.tempFilePath) {
       wx.showToast({ title: '请先录音', icon: 'none' })
@@ -130,5 +147,9 @@ Page({
     const m = Math.floor(sec / 60).toString().padStart(2, '0')
     const s = (sec % 60).toString().padStart(2, '0')
     return m + ':' + s
+  },
+
+  resetAudio() {
+    this.setData({ tempFilePath: '', resultText: '' })
   }
 })

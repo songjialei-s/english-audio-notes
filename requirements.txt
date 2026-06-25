@@ -3,5 +3,5 @@ uvicorn
 pymupdf
 pyttsx3
 python-multipart
-SpeechRecognition
+requests
 pydub

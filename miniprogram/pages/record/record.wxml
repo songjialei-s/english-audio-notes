@@ -9,20 +9,24 @@
   <view class="record-area">
     <view class="timer">{{durationText}}</view>
 
-    <view class="btn-group">
-      <button wx:if="{{!isRecording}}" class="record-btn" bindtap="startRecord">开始录音</button>
-      <button wx:if="{{isRecording}}" class="record-btn recording" bindtap="stopRecord">停止</button>
+    <view class="btn-group" wx:if="{{!isRecording}}">
+      <button class="record-btn" bindtap="startRecord">开始录音</button>
+      <button class="record-btn" bindtap="chooseAudio">上传录音</button>
+    </view>
 
-      <button wx:if="{{isRecording && !isPaused}}" class="pause-btn" bindtap="pauseRecord">暂停</button>
-      <button wx:if="{{isRecording && isPaused}}" class="resume-btn" bindtap="resumeRecord">继续</button>
+    <view class="btn-group" wx:if="{{isRecording}}">
+      <button class="record-btn recording" bindtap="stopRecord">停止</button>
+      <button wx:if="{{!isPaused}}" class="pause-btn" bindtap="pauseRecord">暂停</button>
+      <button wx:if="{{isPaused}}" class="resume-btn" bindtap="resumeRecord">继续</button>
     </view>
   </view>
 
   <view class="result-area" wx:if="{{tempFilePath}}">
-    <view class="section-title">录音结果</view>
+    <view class="section-title">{{isRecording ? '录音结果' : '音频文件'}}</view>
     <view class="audio-bar">
-      <button class="small-btn" bindtap="playAudio">播放录音</button>
+      <button class="small-btn" bindtap="playAudio">播放</button>
       <button class="small-btn primary" bindtap="transcribe" loading="{{uploading}}">转为文字</button>
+      <button class="small-btn" bindtap="resetAudio">取消</button>
     </view>
   </view>
 

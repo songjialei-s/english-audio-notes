@@ -38,7 +38,7 @@ async def upload_pdf(file: UploadFile = File(...)):
 
 
 @app.post("/transcribe")
-async def transcribe(file: UploadFile = File(...), language: str = Form("zh-CN")):
+async def transcribe(file: UploadFile = File(...), language: str = Form("auto")):
     file_id = str(uuid.uuid4())[:8]
     ext = file.filename.split(".")[-1] if "." in file.filename else "wav"
     audio_path = RECORD_DIR / f"{file_id}.{ext}"

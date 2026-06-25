@@ -19,7 +19,7 @@
 
 ### v1.1 - 录音转文字
 - 录音功能（录音/暂停/继续/停止）
-- 录音转文字（SpeechRecognition多语言支持）
+- 录音转文字（Google SpeechRecognition）
 - 底部TabBar导航
 
 ### v1.2 - 扫描件支持
@@ -31,6 +31,11 @@
 - DeepSeek API智能纠错（手写英文识别修正）
 - 词组格式优化（correlate with sth等保持完整）
 - 本地纠错模块（备用方案）
+
+### v1.4 - MiMo语音识别
+- MiMo V2.5-ASR语音识别（替代Google，解决国内网络问题）
+- DeepSeek ASR后处理纠错
+- 支持中英文自动识别
 
 ## 快速开始
 
@@ -54,7 +59,7 @@ python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 | PDF提取 | PyMuPDF + RapidOCR |
 | LLM纠错 | DeepSeek API |
 | TTS | pyttsx3 |
-| STT | SpeechRecognition |
+| STT | MiMo V2.5-ASR + DeepSeek |
 
 ## 项目结构
 
