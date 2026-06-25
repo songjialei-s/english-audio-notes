@@ -6,6 +6,8 @@ Page({
     isRecording: false,
     isPaused: false,
     isPlaying: false,
+    playbackRate: 1,
+    currentTime: '00:00',
     duration: 0,
     durationText: '00:00',
     tempFilePath: '',
@@ -13,12 +15,15 @@ Page({
     language: 'auto',
     currentLang: '自动检测',
     languages: [],
-    uploading: false
+    uploading: false,
+    historyList: [],
+    showHistory: false
   },
 
   onLoad() {
     this.loadLanguages()
     this.initRecorder()
+    this.loadHistory()
   },
 
   loadLanguages() {
@@ -121,6 +126,7 @@ Page({
       success: (res) => {
         const data = JSON.parse(res.data)
         this.setData({ resultText: data.text, uploading: false })
+        this.saveToHistory(data.text)
       },
       fail: () => {
         wx.showToast({ title: '识别失败', icon: 'error' })
@@ -146,15 +152,49 @@ Page({
       }
       this.setData({ isPlaying: false })
     } else {
-      if (!this.data.tempFilePath) return
-      this._audio = wx.createInnerAudioContext()
-      this._audio.src = this.data.tempFilePath
-      this._audio.onEnded(() => {
-        this.setData({ isPlaying: false })
-        this._audio = null
-      })
-      this._audio.play()
-      this.setData({ isPlaying: true })
+      this.startPlay()
+    }
+  },
+
+  startPlay() {
+    if (!this.data.tempFilePath) return
+    this._audio = wx.createInnerAudioContext()
+    this._audio.src = this.data.tempFilePath
+    this._audio.playbackRate = this.data.playbackRate
+    this._audio.onTimeUpdate(() => {
+      if (this._audio) {
+        this.setData({ currentTime: this.formatTime(Math.floor(this._audio.currentTime)) })
+      }
+    })
+    this._audio.onEnded(() => {
+      this.setData({ isPlaying: false, currentTime: '00:00' })
+      this._audio = null
+    })
+    this._audio.play()
+    this.setData({ isPlaying: true })
+  },
+
+  changeSpeed() {
+    const speeds = [1, 1.5, 2, 3]
+    const currentIndex = speeds.indexOf(this.data.playbackRate)
+    const nextIndex = (currentIndex + 1) % speeds.length
+    const newRate = speeds[nextIndex]
+    this.setData({ playbackRate: newRate })
+    if (this._audio) {
+      this._audio.playbackRate = newRate
+    }
+  },
+
+  seekForward() {
+    if (this._audio) {
+      this._audio.seek(this._audio.currentTime + 10)
+    }
+  },
+
+  seekBackward() {
+    if (this._audio) {
+      const newTime = Math.max(0, this._audio.currentTime - 10)
+      this._audio.seek(newTime)
     }
   },
 
@@ -170,6 +210,72 @@ Page({
       this._audio.destroy()
       this._audio = null
     }
-    this.setData({ tempFilePath: '', resultText: '', isPlaying: false })
+    this.setData({ tempFilePath: '', resultText: '', isPlaying: false, playbackRate: 1, currentTime: '00:00' })
+  },
+
+  loadHistory() {
+    const history = wx.getStorageSync('record_history') || []
+    this.setData({ historyList: history })
+  },
+
+  saveToHistory(text) {
+    if (!text) return
+    let history = wx.getStorageSync('record_history') || []
+    const now = new Date()
+    const dateStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`
+    const item = {
+      id: Date.now(),
+      date: dateStr,
+      text: text,
+      duration: this.data.durationText
+    }
+    history.unshift(item)
+    if (history.length > 60) {
+      history = history.slice(0, 60)
+    }
+    wx.setStorageSync('record_history', history)
+    this.setData({ historyList: history })
+  },
+
+  toggleHistory() {
+    this.setData({ showHistory: !this.data.showHistory })
+  },
+
+  viewHistory(e) {
+    const id = e.currentTarget.dataset.id
+    const item = this.data.historyList.find(h => h.id === id)
+    if (item) {
+      this.setData({ resultText: item.text, showHistory: false })
+    }
+  },
+
+  deleteHistory(e) {
+    const id = e.currentTarget.dataset.id
+    wx.showModal({
+      title: '确认删除',
+      content: '确定要删除这条记录吗？',
+      success: (res) => {
+        if (res.confirm) {
+          let history = this.data.historyList.filter(h => h.id !== id)
+          wx.setStorageSync('record_history', history)
+          this.setData({ historyList: history })
+          wx.showToast({ title: '已删除', icon: 'success' })
+        }
+      }
+    })
+  },
+
+  clearHistory() {
+    wx.showModal({
+      title: '清空历史',
+      content: '确定要清空所有历史记录吗？',
+      success: (res) => {
+        if (res.confirm) {
+          wx.setStorageSync('record_history', [])
+          this.setData({ historyList: [] })
+          wx.showToast({ title: '已清空', icon: 'success' })
+        }
+      }
+    })
   }
 })

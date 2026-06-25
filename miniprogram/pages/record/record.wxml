@@ -23,6 +23,13 @@
 
   <view class="result-area" wx:if="{{tempFilePath}}">
     <view class="section-title">{{isRecording ? '录音结果' : '音频文件'}}</view>
+    
+    <view class="playback-controls" wx:if="{{isPlaying}}">
+      <button class="control-btn" bindtap="seekBackward">-10s</button>
+      <button class="speed-btn" bindtap="changeSpeed">{{playbackRate}}x</button>
+      <button class="control-btn" bindtap="seekForward">+10s</button>
+    </view>
+    
     <view class="audio-bar">
       <button class="small-btn" bindtap="togglePlay">{{isPlaying ? '停止' : '播放'}}</button>
       <button class="small-btn primary" bindtap="transcribe" loading="{{uploading}}">转为文字</button>
@@ -34,5 +41,35 @@
     <view class="section-title">识别结果</view>
     <text class="result-text">{{resultText}}</text>
     <button class="copy-btn" bindtap="copyText">复制文字</button>
+  </view>
+
+  <view class="history-section">
+    <view class="history-header" bindtap="toggleHistory">
+      <text class="section-title">历史记录 ({{historyList.length}})</text>
+      <text class="toggle-icon">{{showHistory ? '收起' : '展开'}}</text>
+    </view>
+    
+    <view class="history-list" wx:if="{{showHistory}}">
+      <view class="history-empty" wx:if="{{historyList.length === 0}}">
+        <text>暂无历史记录</text>
+      </view>
+      
+      <view class="history-item" wx:for="{{historyList}}" wx:key="id">
+        <view class="history-content" bindtap="viewHistory" data-id="{{item.id}}">
+          <view class="history-meta">
+            <text class="history-date">{{item.date}}</text>
+            <text class="history-duration">{{item.duration}}</text>
+          </view>
+          <text class="history-text">{{item.text}}</text>
+        </view>
+        <view class="history-delete" bindtap="deleteHistory" data-id="{{item.id}}">
+          <text>删除</text>
+        </view>
+      </view>
+      
+      <view class="history-actions" wx:if="{{historyList.length > 0}}">
+        <button class="clear-btn" bindtap="clearHistory">清空历史</button>
+      </view>
+    </view>
   </view>
 </view>
