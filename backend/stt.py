@@ -1,76 +1,32 @@
-import base64
-import requests
+from faster_whisper import WhisperModel
 from pathlib import Path
-
-MIMO_API_KEY = "sk-c04enis3enaeuvc0eiz3psz4vwc5ggzmztotuesagbyfr22a"
-MIMO_BASE_URL = "https://api.xiaomimimo.com/v1"
 
 DEEPSEEK_API_KEY = "sk-6d156d535c3c467a8b1cb40859b0dfc5"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
-
-def _get_mime_type(audio_path: str) -> str:
-    suffix = Path(audio_path).suffix.lower()
-    mime_map = {
-        ".wav": "audio/wav",
-        ".mp3": "audio/mpeg",
-        ".m4a": "audio/mp4",
-        ".ogg": "audio/ogg",
-        ".flac": "audio/flac",
-        ".webm": "audio/webm",
-    }
-    return mime_map.get(suffix, "audio/wav")
+_model = None
 
 
-def _mimo_asr(audio_path: str, language: str = "auto") -> str:
-    with open(audio_path, "rb") as f:
-        audio_bytes = f.read()
-    audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
-    mime_type = _get_mime_type(audio_path)
-    data_url = f"data:{mime_type};base64,{audio_b64}"
+def _get_model() -> WhisperModel:
+    global _model
+    if _model is None:
+        _model = WhisperModel("base", device="cpu", compute_type="int8")
+    return _model
 
-    headers = {
-        "api-key": MIMO_API_KEY,
-        "Content-Type": "application/json",
-    }
 
-    payload = {
-        "model": "mimo-v2.5-asr",
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "input_audio",
-                        "input_audio": {
-                            "data": data_url,
-                        },
-                    }
-                ],
-            }
-        ],
-        "asr_options": {
-            "language": language,
-        },
-    }
-
-    try:
-        resp = requests.post(
-            f"{MIMO_BASE_URL}/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=120,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
-    except Exception as e:
-        return f"[MiMo ASR Error: {e}]"
+def _whisper_asr(audio_path: str, language: str = "auto") -> str:
+    model = _get_model()
+    lang = None if language == "auto" else language
+    segments, info = model.transcribe(audio_path, language=lang, beam_size=5)
+    text = " ".join([seg.text for seg in segments])
+    return text.strip()
 
 
 def _deepseek_correct(raw_text: str) -> str:
     if not raw_text or raw_text.startswith("["):
         return raw_text
+
+    import requests
 
     headers = {
         "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
@@ -118,7 +74,7 @@ def _deepseek_correct(raw_text: str) -> str:
 
 
 def transcribe_audio(audio_path: str, language: str = "auto") -> str:
-    raw_text = _mimo_asr(audio_path, language)
+    raw_text = _whisper_asr(audio_path, language)
     corrected_text = _deepseek_correct(raw_text)
     return corrected_text
 

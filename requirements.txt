@@ -5,3 +5,4 @@ pyttsx3
 python-multipart
 requests
 pydub
+faster-whisper
