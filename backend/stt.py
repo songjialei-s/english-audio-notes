@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import subprocess
 import requests
 from pathlib import Path
 
@@ -10,38 +11,61 @@ STEP_BASE_URL = "https://api.stepfun.com"
 DEEPSEEK_API_KEY = "sk-6d156d535c3c467a8b1cb40859b0dfc5"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
-CHUNK_DURATION = 30 * 60  # 30分钟分段
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+CHUNK_DURATION = 10 * 60  # 10分钟分段
+
+FFMPEG_PATH = None
+try:
+    import imageio_ffmpeg
+    FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
+except:
+    pass
 
 
 def _get_audio_format(audio_path: str) -> str:
     suffix = Path(audio_path).suffix.lower().lstrip(".")
-    return suffix if suffix in ["wav", "mp3", "ogg", "pcm"] else "wav"
+    format_map = {
+        "wav": "wav", "mp3": "mp3", "ogg": "ogg", "pcm": "pcm",
+        "m4a": "m4a", "aac": "aac", "flac": "flac",
+    }
+    return format_map.get(suffix, "mp3")
 
 
-def _get_audio_duration(audio_path: str) -> float:
+def _compress_audio(audio_path: str) -> str:
+    if not FFMPEG_PATH:
+        return audio_path
+
+    file_size = os.path.getsize(audio_path)
+    max_raw_size = MAX_FILE_SIZE * 0.75
+
+    if file_size <= max_raw_size:
+        return audio_path
+
+    print(f"[Compress] Original: {file_size/1024/1024:.2f} MB, need < {max_raw_size/1024/1024:.2f} MB")
+    compressed_path = audio_path + ".compressed.mp3"
+
     try:
-        from pydub import AudioSegment
-        audio = AudioSegment.from_file(audio_path)
-        return len(audio) / 1000.0
-    except:
-        return 0
+        cmd = [
+            FFMPEG_PATH,
+            "-i", audio_path,
+            "-ar", "16000",
+            "-ac", "1",
+            "-b:a", "32k",
+            "-y",
+            compressed_path
+        ]
+        subprocess.run(cmd, capture_output=True, timeout=120)
 
+        if os.path.exists(compressed_path):
+            new_size = os.path.getsize(compressed_path)
+            print(f"[Compress] Compressed: {new_size/1024/1024:.2f} MB")
+            if new_size <= max_raw_size:
+                return compressed_path
+            os.remove(compressed_path)
+    except Exception as e:
+        print(f"[Compress] Error: {e}")
 
-def _split_audio(audio_path: str, chunk_duration_ms: int) -> list:
-    from pydub import AudioSegment
-    audio = AudioSegment.from_file(audio_path)
-    chunks = []
-    total_len = len(audio)
-    temp_dir = Path(__file__).parent.parent / "storage" / "temp_chunks"
-    temp_dir.mkdir(parents=True, exist_ok=True)
-
-    for i in range(0, total_len, chunk_duration_ms):
-        chunk = audio[i:i + chunk_duration_ms]
-        chunk_path = temp_dir / f"chunk_{i}.wav"
-        chunk.export(str(chunk_path), format="wav")
-        chunks.append(str(chunk_path))
-
-    return chunks
+    return audio_path
 
 
 def _step_asr(audio_path: str, language: str = "auto") -> str:
@@ -49,6 +73,11 @@ def _step_asr(audio_path: str, language: str = "auto") -> str:
         audio_bytes = f.read()
     audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
     audio_format = _get_audio_format(audio_path)
+
+    if audio_path.endswith(".wav"):
+        audio_format = "wav"
+
+    print(f"[ASR] Size: {len(audio_bytes)/1024/1024:.2f} MB, Format: {audio_format}")
 
     headers = {
         "Authorization": f"Bearer {STEP_API_KEY}",
@@ -79,7 +108,7 @@ def _step_asr(audio_path: str, language: str = "auto") -> str:
             f"{STEP_BASE_URL}/v1/audio/asr/sse",
             headers=headers,
             json=payload,
-            timeout=300,
+            timeout=600,
             stream=True,
         )
         resp.raise_for_status()
@@ -148,38 +177,15 @@ def _deepseek_correct(raw_text: str) -> str:
         return raw_text
 
 
-def _cleanup_chunks(chunks: list):
-    for chunk_path in chunks:
-        try:
-            os.remove(chunk_path)
-        except:
-            pass
-
-
 def transcribe_audio(audio_path: str, language: str = "auto") -> str:
-    duration = _get_audio_duration(audio_path)
+    target_path = _compress_audio(audio_path)
+    raw_text = _step_asr(target_path, language)
 
-    if duration > 0 and duration * 1000 > CHUNK_DURATION * 1.5:
-        chunks = _split_audio(audio_path, CHUNK_DURATION * 1000)
-        all_texts = []
+    if target_path != audio_path and os.path.exists(target_path):
+        os.remove(target_path)
 
-        for i, chunk_path in enumerate(chunks):
-            raw_text = _step_asr(chunk_path, language)
-            if raw_text and not raw_text.startswith("["):
-                all_texts.append(raw_text)
-
-        _cleanup_chunks(chunks)
-
-        if not all_texts:
-            return "[ASR返回为空]"
-
-        full_text = "\n".join(all_texts)
-        corrected_text = _deepseek_correct(full_text)
-        return corrected_text
-    else:
-        raw_text = _step_asr(audio_path, language)
-        corrected_text = _deepseek_correct(raw_text)
-        return corrected_text
+    corrected_text = _deepseek_correct(raw_text)
+    return corrected_text
 
 
 def get_supported_languages() -> dict:
