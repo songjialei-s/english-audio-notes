@@ -24,7 +24,7 @@
   <view class="result-area" wx:if="{{tempFilePath}}">
     <view class="section-title">{{isRecording ? '录音结果' : '音频文件'}}</view>
     <view class="audio-bar">
-      <button class="small-btn" bindtap="playAudio">播放</button>
+      <button class="small-btn" bindtap="togglePlay">{{isPlaying ? '停止' : '播放'}}</button>
       <button class="small-btn primary" bindtap="transcribe" loading="{{uploading}}">转为文字</button>
       <button class="small-btn" bindtap="resetAudio">取消</button>
     </view>

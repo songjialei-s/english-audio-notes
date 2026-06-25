@@ -5,6 +5,7 @@ Page({
   data: {
     isRecording: false,
     isPaused: false,
+    isPlaying: false,
     duration: 0,
     durationText: '00:00',
     tempFilePath: '',
@@ -136,11 +137,25 @@ Page({
     })
   },
 
-  playAudio() {
-    if (!this.data.tempFilePath) return
-    const audio = wx.createInnerAudioContext()
-    audio.src = this.data.tempFilePath
-    audio.play()
+  togglePlay() {
+    if (this.data.isPlaying) {
+      if (this._audio) {
+        this._audio.stop()
+        this._audio.destroy()
+        this._audio = null
+      }
+      this.setData({ isPlaying: false })
+    } else {
+      if (!this.data.tempFilePath) return
+      this._audio = wx.createInnerAudioContext()
+      this._audio.src = this.data.tempFilePath
+      this._audio.onEnded(() => {
+        this.setData({ isPlaying: false })
+        this._audio = null
+      })
+      this._audio.play()
+      this.setData({ isPlaying: true })
+    }
   },
 
   formatTime(sec) {
@@ -150,6 +165,11 @@ Page({
   },
 
   resetAudio() {
-    this.setData({ tempFilePath: '', resultText: '' })
+    if (this._audio) {
+      this._audio.stop()
+      this._audio.destroy()
+      this._audio = null
+    }
+    this.setData({ tempFilePath: '', resultText: '', isPlaying: false })
   }
 })
