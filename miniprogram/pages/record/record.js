@@ -16,8 +16,13 @@ Page({
     currentLang: '自动检测',
     languages: [],
     uploading: false,
+    uploadProgress: 0,
+    audioDuration: 0,
+    audioCurrentTime: 0,
+    sliderValue: 0,
     historyList: [],
-    showHistory: false
+    showHistory: false,
+    selectedText: ''
   },
 
   onLoad() {
@@ -117,8 +122,8 @@ Page({
       wx.showToast({ title: '请先录音', icon: 'none' })
       return
     }
-    this.setData({ uploading: true })
-    wx.uploadFile({
+    this.setData({ uploading: true, uploadProgress: 0 })
+    const uploadTask = wx.uploadFile({
       url: app.globalData.baseUrl + '/transcribe',
       filePath: this.data.tempFilePath,
       name: 'file',
@@ -126,14 +131,17 @@ Page({
       timeout: 600000,
       success: (res) => {
         const data = JSON.parse(res.data)
-        this.setData({ resultText: data.text, uploading: false })
+        this.setData({ resultText: data.text, uploading: false, uploadProgress: 0 })
         this.saveToHistory(data.text)
       },
       fail: (err) => {
         console.error('Upload error:', err)
         wx.showToast({ title: '识别失败', icon: 'error' })
-        this.setData({ uploading: false })
+        this.setData({ uploading: false, uploadProgress: 0 })
       }
+    })
+    uploadTask.onProgressUpdate((res) => {
+      this.setData({ uploadProgress: res.progress })
     })
   },
 
@@ -141,8 +149,23 @@ Page({
     if (!this.data.resultText) return
     wx.setClipboardData({
       data: this.data.resultText,
-      success: () => wx.showToast({ title: '已复制', icon: 'success' })
+      success: () => wx.showToast({ title: '已复制全部', icon: 'success' })
     })
+  },
+
+  copySelected() {
+    if (!this.data.selectedText) {
+      wx.showToast({ title: '请先选择文字', icon: 'none' })
+      return
+    }
+    wx.setClipboardData({
+      data: this.data.selectedText,
+      success: () => wx.showToast({ title: '已复制选中', icon: 'success' })
+    })
+  },
+
+  onTextSelect(e) {
+    this.setData({ selectedText: e.detail.value })
   },
 
   togglePlay() {
@@ -163,13 +186,24 @@ Page({
     this._audio = wx.createInnerAudioContext()
     this._audio.src = this.data.tempFilePath
     this._audio.playbackRate = this.data.playbackRate
-    this._audio.onTimeUpdate(() => {
+    this._audio.onCanplay(() => {
       if (this._audio) {
-        this.setData({ currentTime: this.formatTime(Math.floor(this._audio.currentTime)) })
+        this.setData({ audioDuration: this._audio.duration })
+      }
+    })
+    this._audio.onTimeUpdate(() => {
+      if (this._audio && !this._isSliding) {
+        const current = this._audio.currentTime
+        const duration = this._audio.duration || 1
+        this.setData({
+          currentTime: this.formatTime(Math.floor(current)),
+          audioCurrentTime: current,
+          sliderValue: (current / duration) * 100
+        })
       }
     })
     this._audio.onEnded(() => {
-      this.setData({ isPlaying: false, currentTime: '00:00' })
+      this.setData({ isPlaying: false, currentTime: '00:00', sliderValue: 0, audioCurrentTime: 0 })
       this._audio = null
     })
     this._audio.play()
@@ -200,6 +234,22 @@ Page({
     }
   },
 
+  onSliderChanging(e) {
+    this._isSliding = true
+    const duration = this._audio ? this._audio.duration : 1
+    const currentTime = (e.detail.value / 100) * duration
+    this.setData({ audioCurrentTime: currentTime, currentTime: this.formatTime(Math.floor(currentTime)) })
+  },
+
+  onSliderChange(e) {
+    this._isSliding = false
+    if (this._audio) {
+      const duration = this._audio.duration || 1
+      const seekTime = (e.detail.value / 100) * duration
+      this._audio.seek(seekTime)
+    }
+  },
+
   formatTime(sec) {
     const m = Math.floor(sec / 60).toString().padStart(2, '0')
     const s = (sec % 60).toString().padStart(2, '0')
@@ -212,7 +262,10 @@ Page({
       this._audio.destroy()
       this._audio = null
     }
-    this.setData({ tempFilePath: '', resultText: '', isPlaying: false, playbackRate: 1, currentTime: '00:00' })
+    this.setData({
+      tempFilePath: '', resultText: '', isPlaying: false, playbackRate: 1,
+      currentTime: '00:00', audioDuration: 0, audioCurrentTime: 0, sliderValue: 0, selectedText: ''
+    })
   },
 
   loadHistory() {
