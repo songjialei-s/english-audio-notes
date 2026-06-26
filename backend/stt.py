@@ -11,8 +11,8 @@ STEP_BASE_URL = "https://api.stepfun.com"
 DEEPSEEK_API_KEY = "sk-6d156d535c3c467a8b1cb40859b0dfc5"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-CHUNK_DURATION = 10 * 60  # 10分钟分段
+MAX_BASE64_SIZE = 10 * 1024 * 1024
+CHUNK_SECONDS = 10 * 60
 
 FFMPEG_PATH = None
 try:
@@ -31,51 +31,79 @@ def _get_audio_format(audio_path: str) -> str:
     return format_map.get(suffix, "mp3")
 
 
-def _compress_audio(audio_path: str) -> str:
+def _get_duration(audio_path: str) -> float:
     if not FFMPEG_PATH:
-        return audio_path
-
-    file_size = os.path.getsize(audio_path)
-    max_raw_size = MAX_FILE_SIZE * 0.75
-
-    if file_size <= max_raw_size:
-        return audio_path
-
-    print(f"[Compress] Original: {file_size/1024/1024:.2f} MB, need < {max_raw_size/1024/1024:.2f} MB")
-    compressed_path = audio_path + ".compressed.mp3"
-
+        return 0
     try:
+        cmd = [FFMPEG_PATH, "-i", audio_path, "-f", "null", "-"]
+        result = subprocess.run(cmd, capture_output=True, timeout=30)
+        stderr = result.stderr.decode("utf-8", errors="ignore")
+        for line in stderr.split("\n"):
+            if "Duration:" in line:
+                parts = line.split("Duration:")[1].split(",")[0].strip()
+                h, m, s = parts.split(":")
+                return float(h) * 3600 + float(m) * 60 + float(s)
+    except:
+        pass
+    return 0
+
+
+def _split_and_compress(audio_path: str) -> list:
+    if not FFMPEG_PATH:
+        return [audio_path]
+
+    duration = _get_duration(audio_path)
+    file_size = os.path.getsize(audio_path)
+
+    max_raw = MAX_BASE64_SIZE * 0.7 / 1.33
+
+    if file_size <= max_raw:
+        return [audio_path]
+
+    print(f"[Split] Duration: {duration:.0f}s, Size: {file_size/1024/1024:.2f} MB")
+
+    chunks = []
+    temp_dir = Path(__file__).parent.parent / "storage" / "temp_chunks"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    total_ms = int(duration * 1000)
+    chunk_ms = CHUNK_SECONDS * 1000
+
+    for i in range(0, total_ms, chunk_ms):
+        chunk_path = str(temp_dir / f"chunk_{i}.mp3")
         cmd = [
-            FFMPEG_PATH,
-            "-i", audio_path,
-            "-ar", "16000",
-            "-ac", "1",
+            FFMPEG_PATH, "-i", audio_path,
+            "-ss", str(i / 1000),
+            "-t", str(CHUNK_SECONDS),
+            "-ar", "16000", "-ac", "1",
             "-b:a", "32k",
-            "-y",
-            compressed_path
+            "-y", chunk_path
         ]
         subprocess.run(cmd, capture_output=True, timeout=120)
 
-        if os.path.exists(compressed_path):
-            new_size = os.path.getsize(compressed_path)
-            print(f"[Compress] Compressed: {new_size/1024/1024:.2f} MB")
-            if new_size <= max_raw_size:
-                return compressed_path
-            os.remove(compressed_path)
-    except Exception as e:
-        print(f"[Compress] Error: {e}")
+        if os.path.exists(chunk_path):
+            chunk_size = os.path.getsize(chunk_path)
+            print(f"[Split] Chunk {len(chunks)+1}: {chunk_size/1024/1024:.2f} MB")
+            if chunk_size > 0:
+                chunks.append(chunk_path)
 
-    return audio_path
+    return chunks if chunks else [audio_path]
+
+
+def _cleanup(chunks: list, original: str):
+    for c in chunks:
+        if c != original and os.path.exists(c):
+            try:
+                os.remove(c)
+            except:
+                pass
 
 
 def _step_asr(audio_path: str, language: str = "auto") -> str:
     with open(audio_path, "rb") as f:
         audio_bytes = f.read()
     audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
-    audio_format = _get_audio_format(audio_path)
-
-    if audio_path.endswith(".wav"):
-        audio_format = "wav"
+    audio_format = "mp3" if audio_path.endswith(".mp3") else _get_audio_format(audio_path)
 
     print(f"[ASR] Size: {len(audio_bytes)/1024/1024:.2f} MB, Format: {audio_format}")
 
@@ -178,13 +206,22 @@ def _deepseek_correct(raw_text: str) -> str:
 
 
 def transcribe_audio(audio_path: str, language: str = "auto") -> str:
-    target_path = _compress_audio(audio_path)
-    raw_text = _step_asr(target_path, language)
+    chunks = _split_and_compress(audio_path)
+    all_texts = []
 
-    if target_path != audio_path and os.path.exists(target_path):
-        os.remove(target_path)
+    for i, chunk in enumerate(chunks):
+        print(f"[Transcribe] Chunk {i+1}/{len(chunks)}")
+        raw_text = _step_asr(chunk, language)
+        if raw_text and not raw_text.startswith("["):
+            all_texts.append(raw_text)
 
-    corrected_text = _deepseek_correct(raw_text)
+    _cleanup(chunks, audio_path)
+
+    if not all_texts:
+        return "[ASR返回为空]"
+
+    full_text = "\n".join(all_texts)
+    corrected_text = _deepseek_correct(full_text)
     return corrected_text
 
 
