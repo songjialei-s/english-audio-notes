@@ -17,6 +17,7 @@ Page({
     languages: [],
     uploading: false,
     uploadProgress: 0,
+    processingText: '',
     audioDuration: 0,
     audioCurrentTime: 0,
     sliderValue: 0,
@@ -122,7 +123,24 @@ Page({
       wx.showToast({ title: '请先录音', icon: 'none' })
       return
     }
-    this.setData({ uploading: true, uploadProgress: 0 })
+    
+    const audioDur = this.data.audioDuration || this.data.duration || 60
+    const estTotal = Math.max(10, Math.ceil(audioDur * 0.4))
+    
+    this.setData({ uploading: true, uploadProgress: 0, processingText: '准备上传...' })
+    this._processStartTime = Date.now()
+    this._estTotal = estTotal
+    
+    this._processTimer = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - this._processStartTime) / 1000)
+      const remaining = Math.max(0, this._estTotal - elapsed)
+      let stage = '上传中'
+      if (this.data.uploadProgress >= 100) {
+        stage = '识别中'
+      }
+      this.setData({ processingText: `${stage}，预计还需 ${remaining}秒` })
+    }, 1000)
+    
     const uploadTask = wx.uploadFile({
       url: app.globalData.baseUrl + '/transcribe',
       filePath: this.data.tempFilePath,
@@ -130,14 +148,16 @@ Page({
       formData: { language: this.data.language },
       timeout: 600000,
       success: (res) => {
+        clearInterval(this._processTimer)
         const data = JSON.parse(res.data)
-        this.setData({ resultText: data.text, uploading: false, uploadProgress: 0 })
+        this.setData({ resultText: data.text, uploading: false, uploadProgress: 0, processingText: '' })
         this.saveToHistory(data.text)
       },
       fail: (err) => {
+        clearInterval(this._processTimer)
         console.error('Upload error:', err)
         wx.showToast({ title: '识别失败', icon: 'error' })
-        this.setData({ uploading: false, uploadProgress: 0 })
+        this.setData({ uploading: false, uploadProgress: 0, processingText: '' })
       }
     })
     uploadTask.onProgressUpdate((res) => {
@@ -262,9 +282,11 @@ Page({
       this._audio.destroy()
       this._audio = null
     }
+    clearInterval(this._processTimer)
     this.setData({
       tempFilePath: '', resultText: '', isPlaying: false, playbackRate: 1,
-      currentTime: '00:00', audioDuration: 0, audioCurrentTime: 0, sliderValue: 0, selectedText: ''
+      currentTime: '00:00', audioDuration: 0, audioCurrentTime: 0, sliderValue: 0,
+      selectedText: '', uploading: false, uploadProgress: 0, processingText: ''
     })
   },
 
