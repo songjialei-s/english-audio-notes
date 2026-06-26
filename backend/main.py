@@ -45,7 +45,11 @@ async def transcribe(file: UploadFile = File(...), language: str = Form("auto"))
     with open(audio_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
+    file_size = audio_path.stat().st_size
+    print(f"[Transcribe] File: {file.filename}, Size: {file_size} bytes ({file_size/1024/1024:.2f} MB), Ext: {ext}")
+
     text = transcribe_audio(str(audio_path), language)
+    print(f"[Transcribe] Result: {text[:100] if text else 'empty'}...")
     return {"id": file_id, "text": text, "language": language}
 
 

@@ -123,12 +123,14 @@ Page({
       filePath: this.data.tempFilePath,
       name: 'file',
       formData: { language: this.data.language },
+      timeout: 600000,
       success: (res) => {
         const data = JSON.parse(res.data)
         this.setData({ resultText: data.text, uploading: false })
         this.saveToHistory(data.text)
       },
-      fail: () => {
+      fail: (err) => {
+        console.error('Upload error:', err)
         wx.showToast({ title: '识别失败', icon: 'error' })
         this.setData({ uploading: false })
       }
