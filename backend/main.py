@@ -5,7 +5,7 @@ import shutil
 import uuid
 
 from backend.pdf_parser import extract_text, split_into_segments
-from backend.tts import generate_audio
+from backend.tts import generate_audio, get_available_voices
 from backend.stt import transcribe_audio, get_supported_languages
 
 app = FastAPI(title="Document Audio Tool")
@@ -54,17 +54,21 @@ async def transcribe(file: UploadFile = File(...), language: str = Form("auto"))
 
 
 @app.post("/tts")
-async def text_to_speech(text: str = Form(...), language: str = Form("zh-CN")):
+async def text_to_speech(
+    text: str = Form(...),
+    language: str = Form("zh-CN"),
+    voice_id: str = Form(None),
+    rate: int = Form(150)
+):
     file_id = str(uuid.uuid4())[:8]
-    voice_map = {
-        "zh-CN": "zh-CN",
-        "en-US": "en-US",
-        "ja-JP": "ja-JP",
-    }
-    voice = voice_map.get(language, "zh-CN")
     audio_file = f"audio/tts_{file_id}"
-    generate_audio(text, audio_file, voice)
+    generate_audio(text, audio_file, voice_id, rate)
     return {"id": file_id, "audio": f"/audio/{audio_file}.mp3"}
+
+
+@app.get("/voices")
+async def voices():
+    return get_available_voices()
 
 
 @app.get("/audio/{filename}")

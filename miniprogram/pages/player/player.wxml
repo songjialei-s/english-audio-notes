@@ -19,5 +19,10 @@
       </button>
       <button class="ctrl-btn" bindtap="nextSegment">下一段</button>
     </view>
+    
+    <view class="autoplay-bar">
+      <switch checked="{{autoPlay}}" bindchange="toggleAutoPlay" color="#4A90D9" />
+      <text class="autoplay-label">自动连播下一段</text>
+    </view>
   </view>
 </view>

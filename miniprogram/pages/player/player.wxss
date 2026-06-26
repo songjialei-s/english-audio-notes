@@ -70,3 +70,18 @@
   color: #fff;
   font-size: 34rpx;
 }
+
+.autoplay-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  margin-top: 40rpx;
+  padding-top: 30rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.autoplay-label {
+  font-size: 26rpx;
+  color: #666;
+}
