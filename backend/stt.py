@@ -4,6 +4,7 @@ import os
 import subprocess
 import requests
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
 STEP_API_KEY = "6SvrHcNdNjjHIzgjHr3VB8qmcYe97eskHh39UKfFHgk9cIsG8AMt9JKvu1BW9QMw"
 STEP_BASE_URL = "https://api.stepfun.com"
@@ -205,17 +206,33 @@ def _deepseek_correct(raw_text: str) -> str:
         return raw_text
 
 
+def _process_chunk(args):
+    i, chunk, language = args
+    print(f"[Transcribe] Chunk {i+1}")
+    raw_text = _step_asr(chunk, language)
+    return i, raw_text
+
+
 def transcribe_audio(audio_path: str, language: str = "auto") -> str:
     chunks = _split_and_compress(audio_path)
-    all_texts = []
 
-    for i, chunk in enumerate(chunks):
-        print(f"[Transcribe] Chunk {i+1}/{len(chunks)}")
-        raw_text = _step_asr(chunk, language)
-        if raw_text and not raw_text.startswith("["):
-            all_texts.append(raw_text)
+    if len(chunks) == 1:
+        raw_text = _step_asr(chunks[0], language)
+        _cleanup(chunks, audio_path)
+        if not raw_text or raw_text.startswith("["):
+            return raw_text if raw_text else "[ASR返回为空]"
+        return _deepseek_correct(raw_text)
+
+    args = [(i, chunk, language) for i, chunk in enumerate(chunks)]
+    results = []
+
+    with ThreadPoolExecutor(max_workers=min(len(chunks), 6)) as pool:
+        results = list(pool.map(_process_chunk, args))
 
     _cleanup(chunks, audio_path)
+
+    results.sort(key=lambda x: x[0])
+    all_texts = [text for _, text in results if text and not text.startswith("[")]
 
     if not all_texts:
         return "[ASR返回为空]"
