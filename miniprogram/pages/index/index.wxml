@@ -13,7 +13,7 @@
     </view>
     <view class="setting-row">
       <text class="setting-label">语速：</text>
-      <picker range="{{rates}}" range-key="name" bindchange="changeRate">
+      <picker range="{{rateLabels}}" bindchange="changeRate">
         <text class="setting-value">{{currentRate}}</text>
       </picker>
     </view>

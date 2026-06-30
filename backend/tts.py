@@ -6,15 +6,17 @@ STORAGE_DIR = Path(__file__).parent.parent / "storage"
 
 
 def _clean_text_for_tts(text: str) -> str:
-    text = text.replace('/', ' ')
+    text = text.replace('/', ' and ')
     text = re.sub(r'\.{2,}', ' ', text)
-    text = re.sub(r'[，。！？、；：""''【】（）《》…—\-]', ' ', text)
-    text = re.sub(r'[,.!?;:""\[\]()<>]', ' ', text)
+    text = re.sub(r'[,，。！？、；：""''【】（）《》…—]', ' ', text)
+    text = re.sub(r'[.!?:;"\[\]()<>]', ' ', text)
+    text = re.sub(r'([a-zA-Z])([^\sa-zA-Z])', r'\1 \2', text)
+    text = re.sub(r'([^\sa-zA-Z])([a-zA-Z])', r'\1 \2', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
 
-def generate_audio(text: str, filename: str, voice: str = None, rate: int = 150) -> str:
+def generate_audio(text: str, filename: str, voice: str = None, rate: int = 200) -> str:
     output_path = STORAGE_DIR / f"{filename}.mp3"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
