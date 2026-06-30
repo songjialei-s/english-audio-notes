@@ -6,8 +6,10 @@ STORAGE_DIR = Path(__file__).parent.parent / "storage"
 
 
 def _clean_text_for_tts(text: str) -> str:
-    text = re.sub(r'[，。！？、；：""''【】（）《》…—]', ' ', text)
-    text = re.sub(r'[,.!?;:""\[\]()<>-]', ' ', text)
+    text = text.replace('/', ' ')
+    text = re.sub(r'\.{2,}', ' ', text)
+    text = re.sub(r'[，。！？、；：""''【】（）《》…—\-]', ' ', text)
+    text = re.sub(r'[,.!?;:""\[\]()<>]', ' ', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
