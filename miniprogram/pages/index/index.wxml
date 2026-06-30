@@ -17,6 +17,10 @@
         <text class="setting-value">{{currentRate}}</text>
       </picker>
     </view>
+    <view class="setting-row">
+      <text class="setting-label">页码：</text>
+      <input class="pages-input" placeholder="全部（如: 1-5, 8）" value="{{pages}}" bindinput="changePages" />
+    </view>
   </view>
 
   <button class="upload-btn" bindtap="uploadPDF" disabled="{{uploading}}">

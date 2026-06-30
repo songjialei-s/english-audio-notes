@@ -11,7 +11,8 @@ Page({
     rates: [100, 200, 300, 400, 500, 600],
     rateLabels: ['0.5倍速', '1倍速', '1.5倍速', '2倍速', '2.5倍速', '3倍速'],
     rateIndex: 1,
-    currentRate: '1倍速'
+    currentRate: '1倍速',
+    pages: ''
   },
 
   onLoad() {
@@ -45,6 +46,10 @@ Page({
     this.setData({ rateIndex: idx, currentRate: this.data.rateLabels[idx] })
   },
 
+  changePages(e) {
+    this.setData({ pages: e.detail.value })
+  },
+
   loadNotes() {
     const notes = wx.getStorageSync('notes') || []
     this.setData({ notes })
@@ -61,12 +66,13 @@ Page({
 
         const voiceId = this.data.voices[this.data.voiceIndex] ? this.data.voices[this.data.voiceIndex].id : ''
         const rate = this.data.rates[this.data.rateIndex]
+        const pages = this.data.pages.trim()
 
         const task = wx.uploadFile({
           url: app.globalData.baseUrl + '/upload',
           filePath: file.path,
           name: 'file',
-          formData: { voice_id: voiceId, rate: rate },
+          formData: { voice_id: voiceId, rate: rate, pages: pages },
           timeout: 600000,
           success: (uploadRes) => {
             this.setData({ uploading: false })

@@ -7,6 +7,7 @@ import uuid
 from backend.pdf_parser import extract_text, split_into_segments
 from backend.tts import generate_audio, get_available_voices
 from backend.stt import transcribe_audio, get_supported_languages
+from pdf模块 import get_pdf_page_count
 
 app = FastAPI(title="Document Audio Tool")
 STORAGE_DIR = Path(__file__).parent.parent / "storage"
@@ -22,14 +23,15 @@ RECORD_DIR.mkdir(parents=True, exist_ok=True)
 async def upload_pdf(
     file: UploadFile = File(...),
     voice_id: str = Form(None),
-    rate: int = Form(150)
+    rate: int = Form(200),
+    pages: str = Form('')
 ):
     file_id = str(uuid.uuid4())[:8]
     pdf_path = UPLOAD_DIR / f"{file_id}.pdf"
     with open(pdf_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    text = extract_text(str(pdf_path))
+    text = extract_text(str(pdf_path), pages_str=pages)
     segments = split_into_segments(text)
 
     audio_paths = []
@@ -65,8 +67,8 @@ async def text_to_speech(
     rate: int = Form(150)
 ):
     file_id = str(uuid.uuid4())[:8]
-    audio_file = f"audio/tts_{file_id}"
-    generate_audio(text, audio_file, voice_id, rate)
+    audio_file = f"tts_{file_id}"
+    generate_audio(text, f"audio/{audio_file}", voice_id, rate)
     return {"id": file_id, "audio": f"/audio/{audio_file}.mp3"}
 
 
@@ -86,6 +88,15 @@ async def get_audio(filename: str):
 @app.get("/languages")
 async def languages():
     return get_supported_languages()
+
+
+@app.get("/pdf-info")
+async def pdf_info(filename: str):
+    pdf_path = UPLOAD_DIR / filename
+    if not pdf_path.exists():
+        return {"error": "File not found"}
+    count = get_pdf_page_count(str(pdf_path))
+    return {"pages": count}
 
 
 @app.get("/")
