@@ -4,6 +4,21 @@
     <text class="subtitle">上传PDF，AI朗读你的笔记</text>
   </view>
 
+  <view class="settings-area" wx:if="{{voices.length > 0}}">
+    <view class="setting-row">
+      <text class="setting-label">声音：</text>
+      <picker range="{{voices}}" range-key="label" bindchange="changeVoice">
+        <text class="setting-value">{{currentVoice}}</text>
+      </picker>
+    </view>
+    <view class="setting-row">
+      <text class="setting-label">语速：</text>
+      <picker range="{{rates}}" range-key="name" bindchange="changeRate">
+        <text class="setting-value">{{currentRate}}</text>
+      </picker>
+    </view>
+  </view>
+
   <button class="upload-btn" bindtap="uploadPDF" disabled="{{uploading}}">
     {{uploading ? '识别中...' : '+ 导入PDF文档'}}
   </button>

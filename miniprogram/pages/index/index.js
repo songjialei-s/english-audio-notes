@@ -4,11 +4,45 @@ Page({
   data: {
     notes: [],
     uploading: false,
-    uploadTask: null
+    uploadTask: null,
+    voices: [],
+    voiceIndex: 0,
+    currentVoice: '默认',
+    rates: [100, 120, 150, 180, 200],
+    rateIndex: 2,
+    currentRate: 150
   },
 
   onLoad() {
     this.loadNotes()
+    this.loadVoices()
+  },
+
+  loadVoices() {
+    wx.request({
+      url: app.globalData.baseUrl + '/voices',
+      success: (res) => {
+        const list = res.data.map(v => ({
+          id: v.id,
+          name: v.name,
+          lang: v.lang,
+          label: `${v.lang === 'zh' ? '中文' : '英文'} - ${v.name.split(' - ').pop()}`
+        }))
+        this.setData({ voices: list })
+      }
+    })
+  },
+
+  changeVoice(e) {
+    const idx = e.detail.value
+    const voice = this.data.voices[idx]
+    this.setData({ voiceIndex: idx, currentVoice: voice.label })
+  },
+
+  changeRate(e) {
+    const idx = e.detail.value
+    const rate = this.data.rates[idx]
+    this.setData({ rateIndex: idx, currentRate: rate })
   },
 
   loadNotes() {
@@ -25,10 +59,14 @@ Page({
         const file = res.tempFiles[0]
         this.setData({ uploading: true })
 
+        const voiceId = this.data.voices[this.data.voiceIndex] ? this.data.voices[this.data.voiceIndex].id : ''
+        const rate = this.data.currentRate
+
         const task = wx.uploadFile({
           url: app.globalData.baseUrl + '/upload',
           filePath: file.path,
           name: 'file',
+          formData: { voice_id: voiceId, rate: rate },
           timeout: 600000,
           success: (uploadRes) => {
             this.setData({ uploading: false })

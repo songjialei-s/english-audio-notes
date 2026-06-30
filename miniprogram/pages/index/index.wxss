@@ -21,6 +21,37 @@
   color: #999;
 }
 
+.settings-area {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 20rpx 30rpx;
+  margin-bottom: 30rpx;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+}
+
+.setting-row + .setting-row {
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.setting-label {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.setting-value {
+  font-size: 28rpx;
+  color: #4A90D9;
+  padding: 8rpx 16rpx;
+  background: #f5f8fc;
+  border-radius: 8rpx;
+}
+
 .upload-btn {
   width: 100%;
   height: 100rpx;

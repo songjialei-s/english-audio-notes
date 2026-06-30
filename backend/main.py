@@ -19,7 +19,11 @@ RECORD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @app.post("/upload")
-async def upload_pdf(file: UploadFile = File(...)):
+async def upload_pdf(
+    file: UploadFile = File(...),
+    voice_id: str = Form(None),
+    rate: int = Form(150)
+):
     file_id = str(uuid.uuid4())[:8]
     pdf_path = UPLOAD_DIR / f"{file_id}.pdf"
     with open(pdf_path, "wb") as f:
@@ -31,7 +35,7 @@ async def upload_pdf(file: UploadFile = File(...)):
     audio_paths = []
     for i, seg in enumerate(segments):
         audio_file = f"{file_id}_{i}"
-        path = generate_audio(seg, f"audio/{audio_file}")
+        path = generate_audio(seg, f"audio/{audio_file}", voice_id, rate)
         audio_paths.append({"index": i, "text": seg, "audio": f"/audio/{audio_file}.mp3"})
 
     return {"id": file_id, "segments": audio_paths}
