@@ -7,11 +7,11 @@ Page({
     uploadTask: null,
     voices: [],
     voiceIndex: 0,
-    currentVoice: '默认',
-    rates: [100, 200, 300, 400, 500, 600],
-    rateLabels: ['0.5倍速', '1倍速', '1.5倍速', '2倍速', '2.5倍速', '3倍速'],
-    rateIndex: 1,
-    currentRate: '1倍速',
+    currentVoice: '中文女声',
+    rates: [0, 50, 100, 150, 200],
+    rateLabels: ['0.5倍速（慢）', '0.75倍速', '1倍速（正常）', '1.5倍速', '2倍速（快）'],
+    rateIndex: 0,
+    currentRate: '0.5倍速（慢）',
     pages: ''
   },
 
@@ -28,9 +28,9 @@ Page({
           id: v.id,
           name: v.name,
           lang: v.lang,
-          label: `${v.lang === 'zh' ? '中文' : '英文'} - ${v.name.split(' - ').pop()}`
+          label: v.name
         }))
-        this.setData({ voices: list })
+        this.setData({ voices: list, currentVoice: list[0] ? list[0].name : '中文女声' })
       }
     })
   },
