@@ -282,7 +282,7 @@
 }
 
 .textarea-wrap {
-  max-height: 400rpx;
+  max-height: 800rpx;
   overflow-y: auto;
   margin-bottom: 20rpx;
   border: 1rpx solid #e0e0e0;
@@ -292,8 +292,8 @@
 
 .result-textarea {
   width: 100%;
-  min-height: 200rpx;
-  max-height: 400rpx;
+  min-height: 400rpx;
+  max-height: 800rpx;
   font-size: 28rpx;
   line-height: 1.8;
   color: #333;
@@ -304,6 +304,13 @@
 .copy-btns {
   display: flex;
   gap: 20rpx;
+}
+
+.select-hint {
+  font-size: 22rpx;
+  color: #999;
+  text-align: center;
+  margin-bottom: 16rpx;
 }
 
 .copy-btns .copy-btn {
