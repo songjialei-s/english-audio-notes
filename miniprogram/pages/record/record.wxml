@@ -54,8 +54,10 @@
 
   <view class="text-area" wx:if="{{resultText}}">
     <view class="section-title">识别结果</view>
-    <textarea class="result-textarea" value="{{resultText}}" bindinput="onTextSelect" 
-      auto-height maxlength="-1" show-confirm-bar="{{false}}" />
+    <view class="textarea-wrap">
+      <textarea class="result-textarea" value="{{resultText}}" bindinput="onTextSelect" 
+        maxlength="-1" show-confirm-bar="{{false}}" />
+    </view>
     <view class="copy-btns">
       <button class="copy-btn" bindtap="copySelected">复制选中</button>
       <button class="copy-btn primary" bindtap="copyText">复制全部</button>
