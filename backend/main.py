@@ -23,9 +23,11 @@ RECORD_DIR.mkdir(parents=True, exist_ok=True)
 async def upload_pdf(
     file: UploadFile = File(...),
     voice_id: str = Form(None),
-    rate: int = Form(0),
+    rate: str = Form("100"),
     pages: str = Form('')
 ):
+    rate = int(rate) if rate else 100
+    print(f"[UPLOAD] voice_id={voice_id}, rate={rate}, pages={pages}")
     file_id = str(uuid.uuid4())[:8]
     pdf_path = UPLOAD_DIR / f"{file_id}.pdf"
     with open(pdf_path, "wb") as f:
@@ -64,8 +66,9 @@ async def text_to_speech(
     text: str = Form(...),
     language: str = Form("zh-CN"),
     voice_id: str = Form(None),
-    rate: int = Form(0)
+    rate: str = Form("100")
 ):
+    rate = int(rate) if rate else 100
     file_id = str(uuid.uuid4())[:8]
     audio_file = f"tts_{file_id}"
     generate_audio(text, f"audio/{audio_file}", voice_id, rate)

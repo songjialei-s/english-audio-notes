@@ -73,6 +73,8 @@ def generate_audio(text: str, filename: str, voice: str = None, rate: int = 0) -
         rate_str = "-25%"
     else:
         rate_str = "-50%"
+    
+    print(f"[TTS] rate={rate} -> rate_str={rate_str}")
 
     _run_async(_generate_async(clean_text, str(output_path), voice_name, rate_str))
 
