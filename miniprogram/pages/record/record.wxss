@@ -43,6 +43,10 @@
   color: #fff;
 }
 
+.record-btn.video-btn {
+  background: #9b59b6;
+}
+
 .record-btn.recording {
   background: #e74c3c;
 }

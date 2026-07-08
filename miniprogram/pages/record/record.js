@@ -23,7 +23,8 @@ Page({
     sliderValue: 0,
     historyList: [],
     showHistory: false,
-    selectedText: ''
+    selectedText: '',
+    isVideo: false
   },
 
   onLoad() {
@@ -113,7 +114,24 @@ Page({
           resultText: '',
           durationText: this.formatTime(file.size > 0 ? 0 : 0)
         })
-        wx.showToast({ title: '已选择文件', icon: 'success' })
+        wx.showToast({ title: '已选择音频', icon: 'success' })
+      }
+    })
+  },
+
+  chooseVideo() {
+    wx.chooseMessageFile({
+      count: 1,
+      type: 'file',
+      extension: ['mp4', 'mov', 'avi', 'mkv', 'webm', 'flv', 'wmv', 'm4v', '3gp'],
+      success: (res) => {
+        const file = res.tempFiles[0]
+        this.setData({
+          tempFilePath: file.path,
+          resultText: '',
+          isVideo: true
+        })
+        wx.showToast({ title: '已选择视频', icon: 'success' })
       }
     })
   },
@@ -286,7 +304,8 @@ Page({
     this.setData({
       tempFilePath: '', resultText: '', isPlaying: false, playbackRate: 1,
       currentTime: '00:00', audioDuration: 0, audioCurrentTime: 0, sliderValue: 0,
-      selectedText: '', uploading: false, uploadProgress: 0, processingText: ''
+      selectedText: '', uploading: false, uploadProgress: 0, processingText: '',
+      isVideo: false
     })
   },
 

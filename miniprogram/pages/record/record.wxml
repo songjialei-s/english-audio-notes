@@ -12,6 +12,7 @@
     <view class="btn-group" wx:if="{{!isRecording}}">
       <button class="record-btn" bindtap="startRecord">开始录音</button>
       <button class="record-btn" bindtap="chooseAudio">上传录音</button>
+      <button class="record-btn video-btn" bindtap="chooseVideo">上传视频</button>
     </view>
 
     <view class="btn-group" wx:if="{{isRecording}}">
@@ -22,7 +23,7 @@
   </view>
 
   <view class="result-area" wx:if="{{tempFilePath}}">
-    <view class="section-title">{{isRecording ? '录音结果' : '音频文件'}}</view>
+    <view class="section-title">{{isRecording ? '录音结果' : (isVideo ? '视频文件' : '音频文件')}}</view>
     
     <view class="upload-progress" wx:if="{{uploading}}">
       <view class="progress-bar">

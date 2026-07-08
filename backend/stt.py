@@ -15,6 +15,9 @@ DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 MAX_BASE64_SIZE = 10 * 1024 * 1024
 CHUNK_SECONDS = 10 * 60
 
+VIDEO_EXTENSIONS = {'.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv', '.m4v', '.3gp'}
+AUDIO_EXTENSIONS = {'.wav', '.mp3', '.ogg', '.pcm', '.m4a', '.aac', '.flac'}
+
 FFMPEG_PATH = None
 try:
     import imageio_ffmpeg
@@ -30,6 +33,35 @@ def _get_audio_format(audio_path: str) -> str:
         "m4a": "m4a", "aac": "aac", "flac": "flac",
     }
     return format_map.get(suffix, "mp3")
+
+
+def _is_video_file(file_path: str) -> bool:
+    suffix = Path(file_path).suffix.lower()
+    return suffix in VIDEO_EXTENSIONS
+
+
+def _extract_audio_from_video(video_path: str) -> str:
+    if not FFMPEG_PATH:
+        return video_path
+    
+    audio_path = str(Path(video_path).with_suffix('.mp3'))
+    
+    cmd = [
+        FFMPEG_PATH, "-i", video_path,
+        "-vn", "-acodec", "libmp3lame",
+        "-ar", "16000", "-ac", "1",
+        "-b:a", "64k",
+        "-y", audio_path
+    ]
+    
+    try:
+        subprocess.run(cmd, capture_output=True, timeout=300)
+        if os.path.exists(audio_path) and os.path.getsize(audio_path) > 0:
+            return audio_path
+    except Exception as e:
+        print(f"[VideoExtract] Error: {e}")
+    
+    return video_path
 
 
 def _get_duration(audio_path: str) -> float:
@@ -214,11 +246,21 @@ def _process_chunk(args):
 
 
 def transcribe_audio(audio_path: str, language: str = "auto") -> str:
-    chunks = _split_and_compress(audio_path)
+    work_path = audio_path
+    
+    if _is_video_file(audio_path):
+        print(f"[Transcribe] Video detected, extracting audio...")
+        work_path = _extract_audio_from_video(audio_path)
+        if work_path == audio_path:
+            return "[视频音频提取失败]"
+    
+    chunks = _split_and_compress(work_path)
 
     if len(chunks) == 1:
         raw_text = _step_asr(chunks[0], language)
-        _cleanup(chunks, audio_path)
+        _cleanup(chunks, work_path)
+        if work_path != audio_path and os.path.exists(work_path):
+            os.remove(work_path)
         if not raw_text or raw_text.startswith("["):
             return raw_text if raw_text else "[ASR返回为空]"
         return _deepseek_correct(raw_text)
@@ -229,7 +271,9 @@ def transcribe_audio(audio_path: str, language: str = "auto") -> str:
     with ThreadPoolExecutor(max_workers=min(len(chunks), 6)) as pool:
         results = list(pool.map(_process_chunk, args))
 
-    _cleanup(chunks, audio_path)
+    _cleanup(chunks, work_path)
+    if work_path != audio_path and os.path.exists(work_path):
+        os.remove(work_path)
 
     results.sort(key=lambda x: x[0])
     all_texts = [text for _, text in results if text and not text.startswith("[")]
