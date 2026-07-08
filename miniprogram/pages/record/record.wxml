@@ -62,7 +62,8 @@
     <view class="select-hint">双击选词，拖拽可多选</view>
     <view class="copy-btns">
       <button class="copy-btn" bindtap="copySelected">复制选中</button>
-      <button class="copy-btn primary" bindtap="copyText">复制全部</button>
+      <button class="copy-btn" bindtap="copyText">复制全部</button>
+      <button class="copy-btn save-btn" bindtap="saveToHistoryBtn">保存</button>
     </view>
   </view>
 

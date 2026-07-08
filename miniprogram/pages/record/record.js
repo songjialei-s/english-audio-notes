@@ -172,7 +172,6 @@ Page({
         clearInterval(this._processTimer)
         const data = JSON.parse(res.data)
         this.setData({ resultText: data.text, uploading: false, uploadProgress: 0, processingText: '' })
-        this.saveToHistory(data.text)
       },
       fail: (err) => {
         clearInterval(this._processTimer)
@@ -192,6 +191,12 @@ Page({
       data: this.data.resultText,
       success: () => wx.showToast({ title: '已复制全部', icon: 'success' })
     })
+  },
+
+  saveToHistoryBtn() {
+    if (!this.data.resultText) return
+    this.saveToHistory(this.data.resultText)
+    wx.showToast({ title: '已保存', icon: 'success' })
   },
 
   copySelected() {
@@ -330,8 +335,8 @@ Page({
       title: this.data.fileName || '录音'
     }
     history.unshift(item)
-    if (history.length > 60) {
-      history = history.slice(0, 60)
+    if (history.length > 100) {
+      history = history.slice(0, 100)
     }
     wx.setStorageSync('record_history', history)
     this.setData({ historyList: history })
