@@ -79,6 +79,7 @@
       
       <view class="history-item" wx:for="{{historyList}}" wx:key="id">
         <view class="history-content" bindtap="viewHistory" data-id="{{item.id}}">
+          <view class="history-title">{{item.title}}</view>
           <view class="history-meta">
             <text class="history-date">{{item.date}}</text>
             <text class="history-duration">{{item.duration}}</text>

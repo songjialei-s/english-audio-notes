@@ -24,7 +24,8 @@ Page({
     historyList: [],
     showHistory: false,
     selectedText: '',
-    isVideo: false
+    isVideo: false,
+    fileName: ''
   },
 
   onLoad() {
@@ -112,7 +113,8 @@ Page({
         this.setData({
           tempFilePath: file.path,
           resultText: '',
-          durationText: this.formatTime(file.size > 0 ? 0 : 0)
+          durationText: this.formatTime(file.size > 0 ? 0 : 0),
+          fileName: file.name
         })
         wx.showToast({ title: '已选择音频', icon: 'success' })
       }
@@ -129,7 +131,8 @@ Page({
         this.setData({
           tempFilePath: file.path,
           resultText: '',
-          isVideo: true
+          isVideo: true,
+          fileName: file.name
         })
         wx.showToast({ title: '已选择视频', icon: 'success' })
       }
@@ -305,7 +308,7 @@ Page({
       tempFilePath: '', resultText: '', isPlaying: false, playbackRate: 1,
       currentTime: '00:00', audioDuration: 0, audioCurrentTime: 0, sliderValue: 0,
       selectedText: '', uploading: false, uploadProgress: 0, processingText: '',
-      isVideo: false
+      isVideo: false, fileName: ''
     })
   },
 
@@ -323,7 +326,8 @@ Page({
       id: Date.now(),
       date: dateStr,
       text: text,
-      duration: this.data.durationText
+      duration: this.data.durationText,
+      title: this.data.fileName || '录音'
     }
     history.unshift(item)
     if (history.length > 60) {

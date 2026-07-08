@@ -193,6 +193,16 @@
   overflow: hidden;
 }
 
+.history-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .history-meta {
   display: flex;
   gap: 20rpx;
