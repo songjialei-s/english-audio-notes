@@ -335,3 +335,8 @@
   background: #4A90D9;
   color: #fff;
 }
+
+.copy-btns .copy-btn.save-btn {
+  background: #27ae60;
+  color: #fff;
+}
