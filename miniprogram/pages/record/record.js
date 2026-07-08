@@ -25,11 +25,7 @@ Page({
     showHistory: false,
     selectedText: '',
     isVideo: false,
-    fileName: '',
-    fullScreenText: '',
-    fullScreenTitle: '',
-    showFullScreen: false,
-    fontSizeLevel: 0
+    fileName: ''
   },
 
   onLoad() {
@@ -350,33 +346,11 @@ Page({
     this.setData({ showHistory: !this.data.showHistory })
   },
 
-  closeFullScreen() {
-    this.setData({ showFullScreen: false, fullScreenText: '', fullScreenTitle: '' })
-  },
-
-  increaseFontSize() {
-    const next = (this.data.fontSizeLevel + 1) % 4
-    this.setData({ fontSizeLevel: next })
-  },
-
-  copyFullScreenText() {
-    if (!this.data.fullScreenText) return
-    wx.setClipboardData({
-      data: this.data.fullScreenText,
-      success: () => wx.showToast({ title: '已复制', icon: 'success' })
-    })
-  },
-
   viewHistory(e) {
     const id = e.currentTarget.dataset.id
     const item = this.data.historyList.find(h => h.id === id)
     if (item) {
-      this.setData({ 
-        fullScreenText: item.text, 
-        fullScreenTitle: item.title,
-        showFullScreen: true,
-        fontSizeLevel: 0
-      })
+      this.setData({ resultText: item.text, showHistory: false })
     }
   },
 

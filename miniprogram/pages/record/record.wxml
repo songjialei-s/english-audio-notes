@@ -97,25 +97,4 @@
       </view>
     </view>
   </view>
-
-  <!-- 全屏查看弹窗 -->
-  <view class="fullscreen-overlay" wx:if="{{showFullScreen}}">
-    <view class="fullscreen-header">
-      <text class="fullscreen-title">{{fullScreenTitle}}</text>
-      <view class="fullscreen-actions">
-        <view class="font-size-btn" bindtap="increaseFontSize">
-          <text>A+</text>
-        </view>
-        <view class="close-btn" bindtap="closeFullScreen">
-          <text>关闭</text>
-        </view>
-      </view>
-    </view>
-    <scroll-view class="fullscreen-content" scroll-y>
-      <text class="fullscreen-text font-size-{{fontSizeLevel}}">{{fullScreenText}}</text>
-    </scroll-view>
-    <view class="fullscreen-footer">
-      <button class="fullscreen-copy-btn" bindtap="copyFullScreenText">复制全部</button>
-    </view>
-  </view>
 </view>
