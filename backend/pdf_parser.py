@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from pdf模块 import extract_text
+from backend.pdf_module import extract_text
 from backend.text_corrector import correct_ocr_text
 
 

@@ -14,6 +14,10 @@ STEP_BASE_URL = "https://api.stepfun.com"
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
+# 火山引擎 OCR
+VOLCENGINE_API_KEY = os.getenv("VOLCENGINE_API_KEY", "")
+VOLCENGINE_BASE_URL = "https://ark.cn-beijing.volces.com/api/coding/v3"
+
 # 存储目录
 BASE_DIR = Path(__file__).parent.parent
 STORAGE_DIR = BASE_DIR / "storage"

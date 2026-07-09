@@ -1,8 +1,8 @@
+"""火山引擎 OCR 识别模块"""
 import base64
 import requests
 
-API_KEY = "ark-2de5a892-b0f3-433f-aa6e-71dcb2026cad-4a7db"
-BASE_URL = "https://ark.cn-beijing.volces.com/api/coding/v3"
+from backend.config import VOLCENGINE_API_KEY, VOLCENGINE_BASE_URL
 
 
 def ocr_image(image_path: str) -> str:
@@ -10,7 +10,7 @@ def ocr_image(image_path: str) -> str:
         image_data = base64.b64encode(f.read()).decode("utf-8")
 
     headers = {
-        "Authorization": f"Bearer {API_KEY}",
+        "Authorization": f"Bearer {VOLCENGINE_API_KEY}",
         "Content-Type": "application/json"
     }
 
@@ -38,7 +38,7 @@ def ocr_image(image_path: str) -> str:
 
     try:
         resp = requests.post(
-            f"{BASE_URL}/chat/completions",
+            f"{VOLCENGINE_BASE_URL}/chat/completions",
             headers=headers,
             json=payload,
             timeout=60

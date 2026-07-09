@@ -105,7 +105,7 @@ def get_pdf_page_count(pdf_path: str) -> int:
 if __name__ == "__main__":
     import sys
     if len(sys.argv) < 2:
-        print("Usage: python pdf模块.py <path_to_pdf>")
+        print("Usage: python -m backend.pdf_module <path_to_pdf>")
         sys.exit(1)
     text = extract_text(sys.argv[1])
     print(text[:500])

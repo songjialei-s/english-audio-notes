@@ -3,5 +3,8 @@ __pycache__/
 storage/uploads/
 storage/audio/
 storage/records/
+storage/temp_chunks/
 .env
 .DS_Store
+tests/*.wav
+tests/*.mp3

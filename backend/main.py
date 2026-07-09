@@ -8,7 +8,7 @@ from backend.config import UPLOAD_DIR, AUDIO_DIR, RECORD_DIR
 from backend.pdf_parser import extract_text, split_into_segments
 from backend.tts import generate_audio, get_available_voices
 from backend.stt import transcribe_audio, get_supported_languages
-from pdf模块 import get_pdf_page_count
+from backend.pdf_module import get_pdf_page_count
 
 app = FastAPI(title="Document Audio Tool")
 
