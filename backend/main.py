@@ -1,22 +1,16 @@
-from fastapi import FastAPI, UploadFile, File, Form
-from fastapi.responses import FileResponse
-from pathlib import Path
+"""FastAPI 主入口 - 路由定义"""
 import shutil
 import uuid
+from fastapi import FastAPI, UploadFile, File, Form
+from fastapi.responses import FileResponse, JSONResponse
 
+from backend.config import UPLOAD_DIR, AUDIO_DIR, RECORD_DIR
 from backend.pdf_parser import extract_text, split_into_segments
 from backend.tts import generate_audio, get_available_voices
 from backend.stt import transcribe_audio, get_supported_languages
 from pdf模块 import get_pdf_page_count
 
 app = FastAPI(title="Document Audio Tool")
-STORAGE_DIR = Path(__file__).parent.parent / "storage"
-UPLOAD_DIR = STORAGE_DIR / "uploads"
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-AUDIO_DIR = STORAGE_DIR / "audio"
-AUDIO_DIR.mkdir(parents=True, exist_ok=True)
-RECORD_DIR = STORAGE_DIR / "records"
-RECORD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @app.post("/upload")
@@ -26,39 +20,67 @@ async def upload_pdf(
     rate: str = Form("100"),
     pages: str = Form('')
 ):
-    rate = int(rate) if rate else 100
-    print(f"[UPLOAD] voice_id={voice_id}, rate={rate}, pages={pages}")
-    file_id = str(uuid.uuid4())[:8]
-    pdf_path = UPLOAD_DIR / f"{file_id}.pdf"
-    with open(pdf_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+    """上传 PDF 并生成语音"""
+    try:
+        rate = int(rate) if rate else 100
+        print(f"[UPLOAD] voice_id={voice_id}, rate={rate}, pages={pages}")
 
-    text = extract_text(str(pdf_path), pages_str=pages)
-    segments = split_into_segments(text)
+        # 保存上传的 PDF
+        file_id = str(uuid.uuid4())[:8]
+        pdf_path = UPLOAD_DIR / f"{file_id}.pdf"
+        with open(pdf_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
 
-    audio_paths = []
-    for i, seg in enumerate(segments):
-        audio_file = f"{file_id}_{i}"
-        path = generate_audio(seg, f"audio/{audio_file}", voice_id, rate)
-        audio_paths.append({"index": i, "text": seg, "audio": f"/audio/{audio_file}.mp3"})
+        # 提取文本并分段
+        text = extract_text(str(pdf_path), pages_str=pages)
+        segments = split_into_segments(text)
 
-    return {"id": file_id, "segments": audio_paths}
+        # 为每段生成语音
+        audio_paths = []
+        for i, seg in enumerate(segments):
+            audio_file = f"{file_id}_{i}"
+            generate_audio(seg, f"audio/{audio_file}", voice_id, rate)
+            audio_paths.append({
+                "index": i,
+                "text": seg,
+                "audio": f"/audio/{audio_file}.mp3"
+            })
+
+        return {"id": file_id, "segments": audio_paths}
+
+    except Exception as e:
+        print(f"[UPLOAD] Error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 @app.post("/transcribe")
-async def transcribe(file: UploadFile = File(...), language: str = Form("auto")):
-    file_id = str(uuid.uuid4())[:8]
-    ext = file.filename.split(".")[-1] if "." in file.filename else "wav"
-    audio_path = RECORD_DIR / f"{file_id}.{ext}"
-    with open(audio_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+async def transcribe(
+    file: UploadFile = File(...),
+    language: str = Form("auto")
+):
+    """语音/视频转文字"""
+    try:
+        file_id = str(uuid.uuid4())[:8]
+        ext = file.filename.split(".")[-1] if "." in file.filename else "wav"
+        audio_path = RECORD_DIR / f"{file_id}.{ext}"
 
-    file_size = audio_path.stat().st_size
-    print(f"[Transcribe] File: {file.filename}, Size: {file_size} bytes ({file_size/1024/1024:.2f} MB), Ext: {ext}")
+        # 保存上传的文件
+        with open(audio_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
 
-    text = transcribe_audio(str(audio_path), language)
-    print(f"[Transcribe] Result: {text[:100] if text else 'empty'}...")
-    return {"id": file_id, "text": text, "language": language}
+        # 打印文件信息
+        file_size = audio_path.stat().st_size
+        print(f"[Transcribe] File: {file.filename}, Size: {file_size/1024/1024:.2f} MB")
+
+        # 转写
+        text = transcribe_audio(str(audio_path), language)
+        print(f"[Transcribe] Result: {text[:100] if text else 'empty'}...")
+
+        return {"id": file_id, "text": text, "language": language}
+
+    except Exception as e:
+        print(f"[Transcribe] Error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 @app.post("/tts")
@@ -68,40 +90,51 @@ async def text_to_speech(
     voice_id: str = Form(None),
     rate: str = Form("100")
 ):
-    rate = int(rate) if rate else 100
-    file_id = str(uuid.uuid4())[:8]
-    audio_file = f"tts_{file_id}"
-    generate_audio(text, f"audio/{audio_file}", voice_id, rate)
-    return {"id": file_id, "audio": f"/audio/{audio_file}.mp3"}
+    """文本转语音"""
+    try:
+        rate = int(rate) if rate else 100
+        file_id = str(uuid.uuid4())[:8]
+        audio_file = f"tts_{file_id}"
+        generate_audio(text, f"audio/{audio_file}", voice_id, rate)
+        return {"id": file_id, "audio": f"/audio/{audio_file}.mp3"}
+
+    except Exception as e:
+        print(f"[TTS] Error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 @app.get("/voices")
 async def voices():
+    """获取可用声音列表"""
     return get_available_voices()
 
 
 @app.get("/audio/{filename}")
 async def get_audio(filename: str):
+    """获取音频文件"""
     file_path = AUDIO_DIR / filename
     if file_path.exists():
         return FileResponse(str(file_path), media_type="audio/mpeg")
-    return {"error": "File not found"}
+    return JSONResponse(status_code=404, content={"error": "File not found"})
 
 
 @app.get("/languages")
 async def languages():
+    """获取支持的语言列表"""
     return get_supported_languages()
 
 
 @app.get("/pdf-info")
 async def pdf_info(filename: str):
+    """获取 PDF 页数"""
     pdf_path = UPLOAD_DIR / filename
     if not pdf_path.exists():
-        return {"error": "File not found"}
+        return JSONResponse(status_code=404, content={"error": "File not found"})
     count = get_pdf_page_count(str(pdf_path))
     return {"pages": count}
 
 
 @app.get("/")
 async def root():
+    """健康检查"""
     return {"message": "Document Audio Tool API is running"}

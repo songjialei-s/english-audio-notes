@@ -1,12 +1,13 @@
+"""DeepSeek LLM 纠错模块"""
 import requests
 
-API_KEY = "sk-6d156d535c3c467a8b1cb40859b0dfc5"
-BASE_URL = "https://api.deepseek.com"
+from backend.config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL
 
 
 def correct_with_llm(raw_text: str) -> str:
+    """用 LLM 纠正 OCR 识别结果"""
     headers = {
-        "Authorization": f"Bearer {API_KEY}",
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
         "Content-Type": "application/json"
     }
 
@@ -49,7 +50,7 @@ def correct_with_llm(raw_text: str) -> str:
 
     try:
         resp = requests.post(
-            f"{BASE_URL}/v1/chat/completions",
+            f"{DEEPSEEK_BASE_URL}/v1/chat/completions",
             headers=headers,
             json=payload,
             timeout=60

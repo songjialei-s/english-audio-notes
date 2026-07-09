@@ -1,8 +1,10 @@
 fastapi
 uvicorn
 pymupdf
-pyttsx3
 python-multipart
 requests
 pydub
-faster-whisper
+edge-tts
+rapidocr-onnxruntime
+imageio-ffmpeg
+python-dotenv

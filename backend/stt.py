@@ -1,3 +1,4 @@
+"""语音识别模块 - StepFun ASR + DeepSeek 纠错"""
 import base64
 import json
 import os
@@ -6,18 +7,14 @@ import requests
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
-STEP_API_KEY = "6SvrHcNdNjjHIzgjHr3VB8qmcYe97eskHh39UKfFHgk9cIsG8AMt9JKvu1BW9QMw"
-STEP_BASE_URL = "https://api.stepfun.com"
+from backend.config import (
+    STEP_API_KEY, STEP_BASE_URL,
+    DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL,
+    MAX_BASE64_SIZE, CHUNK_SECONDS,
+    VIDEO_EXTENSIONS, TEMP_DIR
+)
 
-DEEPSEEK_API_KEY = "sk-6d156d535c3c467a8b1cb40859b0dfc5"
-DEEPSEEK_BASE_URL = "https://api.deepseek.com"
-
-MAX_BASE64_SIZE = 10 * 1024 * 1024
-CHUNK_SECONDS = 10 * 60
-
-VIDEO_EXTENSIONS = {'.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv', '.m4v', '.3gp'}
-AUDIO_EXTENSIONS = {'.wav', '.mp3', '.ogg', '.pcm', '.m4a', '.aac', '.flac'}
-
+# 获取 ffmpeg 路径
 FFMPEG_PATH = None
 try:
     import imageio_ffmpeg
@@ -27,6 +24,7 @@ except:
 
 
 def _get_audio_format(audio_path: str) -> str:
+    """获取音频格式"""
     suffix = Path(audio_path).suffix.lower().lstrip(".")
     format_map = {
         "wav": "wav", "mp3": "mp3", "ogg": "ogg", "pcm": "pcm",
@@ -36,16 +34,19 @@ def _get_audio_format(audio_path: str) -> str:
 
 
 def _is_video_file(file_path: str) -> bool:
+    """判断是否是视频文件"""
     suffix = Path(file_path).suffix.lower()
     return suffix in VIDEO_EXTENSIONS
 
 
 def _extract_audio_from_video(video_path: str) -> str:
+    """从视频中提取音频"""
     if not FFMPEG_PATH:
         return video_path
-    
+
     audio_path = str(Path(video_path).with_suffix('.mp3'))
-    
+
+    # 用 ffmpeg 提取音频，采样率 16000，单声道，64kbps
     cmd = [
         FFMPEG_PATH, "-i", video_path,
         "-vn", "-acodec", "libmp3lame",
@@ -53,18 +54,19 @@ def _extract_audio_from_video(video_path: str) -> str:
         "-b:a", "64k",
         "-y", audio_path
     ]
-    
+
     try:
         subprocess.run(cmd, capture_output=True, timeout=300)
         if os.path.exists(audio_path) and os.path.getsize(audio_path) > 0:
             return audio_path
     except Exception as e:
         print(f"[VideoExtract] Error: {e}")
-    
+
     return video_path
 
 
 def _get_duration(audio_path: str) -> float:
+    """获取音频时长（秒）"""
     if not FFMPEG_PATH:
         return 0
     try:
@@ -82,28 +84,29 @@ def _get_duration(audio_path: str) -> float:
 
 
 def _split_and_compress(audio_path: str) -> list:
+    """大文件分片处理"""
     if not FFMPEG_PATH:
         return [audio_path]
 
     duration = _get_duration(audio_path)
     file_size = os.path.getsize(audio_path)
 
+    # 计算 base64 编码后的大小限制
     max_raw = MAX_BASE64_SIZE * 0.7 / 1.33
 
+    # 文件小于限制，不分片
     if file_size <= max_raw:
         return [audio_path]
 
     print(f"[Split] Duration: {duration:.0f}s, Size: {file_size/1024/1024:.2f} MB")
 
+    # 按 CHUNK_SECONDS 分片
     chunks = []
-    temp_dir = Path(__file__).parent.parent / "storage" / "temp_chunks"
-    temp_dir.mkdir(parents=True, exist_ok=True)
-
     total_ms = int(duration * 1000)
     chunk_ms = CHUNK_SECONDS * 1000
 
     for i in range(0, total_ms, chunk_ms):
-        chunk_path = str(temp_dir / f"chunk_{i}.mp3")
+        chunk_path = str(TEMP_DIR / f"chunk_{i}.mp3")
         cmd = [
             FFMPEG_PATH, "-i", audio_path,
             "-ss", str(i / 1000),
@@ -124,6 +127,7 @@ def _split_and_compress(audio_path: str) -> list:
 
 
 def _cleanup(chunks: list, original: str):
+    """清理临时分片文件"""
     for c in chunks:
         if c != original and os.path.exists(c):
             try:
@@ -133,6 +137,8 @@ def _cleanup(chunks: list, original: str):
 
 
 def _step_asr(audio_path: str, language: str = "auto") -> str:
+    """调用 StepFun ASR 接口"""
+    # 读取音频文件并 base64 编码
     with open(audio_path, "rb") as f:
         audio_bytes = f.read()
     audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
@@ -146,6 +152,7 @@ def _step_asr(audio_path: str, language: str = "auto") -> str:
         "Accept": "text/event-stream",
     }
 
+    # 语言选择：zh 或 en，其他默认中文
     lang = "zh" if language == "zh" else "en" if language == "en" else "zh"
 
     payload = {
@@ -165,6 +172,7 @@ def _step_asr(audio_path: str, language: str = "auto") -> str:
     }
 
     try:
+        # SSE 流式响应
         resp = requests.post(
             f"{STEP_BASE_URL}/v1/audio/asr/sse",
             headers=headers,
@@ -174,6 +182,7 @@ def _step_asr(audio_path: str, language: str = "auto") -> str:
         )
         resp.raise_for_status()
 
+        # 解析 SSE 数据
         final_text = ""
         for line in resp.iter_lines():
             if line:
@@ -193,6 +202,7 @@ def _step_asr(audio_path: str, language: str = "auto") -> str:
 
 
 def _deepseek_correct(raw_text: str) -> str:
+    """用 DeepSeek 纠正语音识别结果"""
     if not raw_text or raw_text.startswith("["):
         return raw_text
 
@@ -239,6 +249,7 @@ def _deepseek_correct(raw_text: str) -> str:
 
 
 def _process_chunk(args):
+    """处理单个分片（用于多线程）"""
     i, chunk, language = args
     print(f"[Transcribe] Chunk {i+1}")
     raw_text = _step_asr(chunk, language)
@@ -246,16 +257,20 @@ def _process_chunk(args):
 
 
 def transcribe_audio(audio_path: str, language: str = "auto") -> str:
+    """语音转文字主函数"""
     work_path = audio_path
-    
+
+    # 如果是视频，先提取音频
     if _is_video_file(audio_path):
         print(f"[Transcribe] Video detected, extracting audio...")
         work_path = _extract_audio_from_video(audio_path)
         if work_path == audio_path:
             return "[视频音频提取失败]"
-    
+
+    # 分片处理
     chunks = _split_and_compress(work_path)
 
+    # 单片直接处理
     if len(chunks) == 1:
         raw_text = _step_asr(chunks[0], language)
         _cleanup(chunks, work_path)
@@ -265,16 +280,19 @@ def transcribe_audio(audio_path: str, language: str = "auto") -> str:
             return raw_text if raw_text else "[ASR返回为空]"
         return _deepseek_correct(raw_text)
 
+    # 多片并行处理
     args = [(i, chunk, language) for i, chunk in enumerate(chunks)]
     results = []
 
     with ThreadPoolExecutor(max_workers=min(len(chunks), 6)) as pool:
         results = list(pool.map(_process_chunk, args))
 
+    # 清理临时文件
     _cleanup(chunks, work_path)
     if work_path != audio_path and os.path.exists(work_path):
         os.remove(work_path)
 
+    # 合并结果
     results.sort(key=lambda x: x[0])
     all_texts = [text for _, text in results if text and not text.startswith("[")]
 
@@ -282,11 +300,11 @@ def transcribe_audio(audio_path: str, language: str = "auto") -> str:
         return "[ASR返回为空]"
 
     full_text = "\n".join(all_texts)
-    corrected_text = _deepseek_correct(full_text)
-    return corrected_text
+    return _deepseek_correct(full_text)
 
 
 def get_supported_languages() -> dict:
+    """获取支持的语言列表"""
     return {
         "auto": "自动检测",
         "zh": "中文",
