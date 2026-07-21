@@ -134,5 +134,23 @@ Page({
         }
       }
     })
+  },
+
+  setServerUrl() {
+    wx.showModal({
+      title: '设置服务器地址',
+      editable: true,
+      placeholderText: app.globalData.baseUrl,
+      success: (res) => {
+        if (res.confirm && res.content) {
+          const url = res.content.trim()
+          if (url) {
+            app.setServerUrl(url)
+            wx.showToast({ title: '已更新', icon: 'success' })
+            this.loadVoices()
+          }
+        }
+      }
+    })
   }
 })

@@ -1,6 +1,7 @@
 """FastAPI 主入口 - 路由定义"""
 import shutil
 import uuid
+from datetime import datetime
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import FileResponse, JSONResponse
 
@@ -138,3 +139,9 @@ async def pdf_info(filename: str):
 async def root():
     """健康检查"""
     return {"message": "Document Audio Tool API is running"}
+
+
+@app.get("/health")
+async def health():
+    """服务健康检查"""
+    return {"status": "ok", "timestamp": datetime.now().isoformat()}

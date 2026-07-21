@@ -8,7 +8,8 @@ Page({
     isPlaying: false,
     currentTime: '00:00',
     duration: '00:00',
-    autoPlay: true
+    autoPlay: true,
+    sleepTimer: false
   },
 
   onLoad(options) {
@@ -34,6 +35,10 @@ Page({
     })
 
     innerAudioContext.onEnded(() => {
+      if (this.data.sleepTimer) {
+        this.setData({ isPlaying: false })
+        return
+      }
       if (this.data.currentSegment < this.data.note.segments.length - 1) {
         this.setData({ currentSegment: this.data.currentSegment + 1 })
         this.initAudio()
@@ -66,6 +71,11 @@ Page({
   toggleAutoPlay() {
     this.setData({ autoPlay: !this.data.autoPlay })
     wx.showToast({ title: this.data.autoPlay ? '已开启连播' : '已关闭连播', icon: 'none' })
+  },
+
+  toggleSleep() {
+    this.setData({ sleepTimer: !this.data.sleepTimer })
+    wx.showToast({ title: this.data.sleepTimer ? '播完当前段停止' : '已关闭', icon: 'none' })
   },
 
   prevSegment() {

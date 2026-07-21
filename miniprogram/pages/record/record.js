@@ -172,6 +172,7 @@ Page({
         clearInterval(this._processTimer)
         const data = JSON.parse(res.data)
         this.setData({ resultText: data.text, uploading: false, uploadProgress: 0, processingText: '' })
+        wx.setClipboardData({ data: data.text })
       },
       fail: (err) => {
         clearInterval(this._processTimer)

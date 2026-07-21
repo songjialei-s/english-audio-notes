@@ -24,5 +24,9 @@
       <switch checked="{{autoPlay}}" bindchange="toggleAutoPlay" color="#4A90D9" />
       <text class="autoplay-label">自动连播下一段</text>
     </view>
+    <view class="autoplay-bar">
+      <switch checked="{{sleepTimer}}" bindchange="toggleSleep" color="#4A90D9" />
+      <text class="autoplay-label">播完当前段停止</text>
+    </view>
   </view>
 </view>

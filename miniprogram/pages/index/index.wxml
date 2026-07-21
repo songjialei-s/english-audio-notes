@@ -1,6 +1,6 @@
 <view class="container">
   <view class="header">
-    <text class="title">听文档</text>
+    <text class="title" bindtap="setServerUrl">听文档</text>
     <text class="subtitle">上传PDF，AI朗读你的笔记</text>
   </view>
 
