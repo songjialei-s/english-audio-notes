@@ -25,7 +25,9 @@ Page({
     showHistory: false,
     selectedText: '',
     isVideo: false,
-    fileName: ''
+    fileName: '',
+    trimming: false,
+    trimResult: null
   },
 
   onLoad() {
@@ -183,6 +185,73 @@ Page({
     })
     uploadTask.onProgressUpdate((res) => {
       this.setData({ uploadProgress: res.progress })
+    })
+  },
+
+  trimSilence() {
+    if (!this.data.tempFilePath) {
+      wx.showToast({ title: '请先录音', icon: 'none' })
+      return
+    }
+    this.setData({ trimming: true, trimResult: null })
+    wx.uploadFile({
+      url: app.globalData.baseUrl + '/trim-silence',
+      filePath: this.data.tempFilePath,
+      name: 'file',
+      formData: { silence_threshold: '-40', min_silence_duration: '5' },
+      success: (res) => {
+        const data = JSON.parse(res.data)
+        if (data.error) {
+          wx.showToast({ title: data.error, icon: 'error' })
+        } else {
+          this.setData({
+            tempFilePath: app.globalData.baseUrl + data.audio,
+            trimResult: data,
+            audioDuration: 0,
+            audioCurrentTime: 0,
+            sliderValue: 0,
+            currentTime: '00:00'
+          })
+          wx.showToast({ title: `节省 ${data.saved_seconds}秒`, icon: 'success' })
+        }
+        this.setData({ trimming: false })
+      },
+      fail: () => {
+        wx.showToast({ title: '裁剪失败', icon: 'error' })
+        this.setData({ trimming: false })
+      }
+    })
+  },
+
+  transcribeTrimmed() {
+    if (!this.data.tempFilePath) return
+    this.transcribe()
+  },
+
+  saveTrimmedAudio() {
+    if (!this.data.tempFilePath || !this.data.trimResult) return
+    const fs = wx.getFileSystemManager()
+    const filePath = `${wx.env.USER_DATA_PATH}/trimmed_${Date.now()}.mp3`
+    wx.downloadFile({
+      url: this.data.tempFilePath,
+      success: (res) => {
+        fs.writeFile({
+          filePath: filePath,
+          data: res.tempFilePath,
+          encoding: 'binary',
+          success: () => {
+            wx.saveVideoToPhotosAlbum({
+              filePath: filePath,
+              success: () => {
+                wx.showToast({ title: '已保存到相册', icon: 'success' })
+              },
+              fail: () => {
+                wx.showToast({ title: '保存失败', icon: 'error' })
+              }
+            })
+          }
+        })
+      }
     })
   },
 

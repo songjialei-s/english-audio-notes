@@ -49,7 +49,16 @@
     <view class="audio-bar">
       <button class="small-btn" bindtap="togglePlay">{{isPlaying ? '停止' : '播放'}}</button>
       <button class="small-btn primary" bindtap="transcribe" loading="{{uploading}}">转为文字</button>
+      <button class="small-btn" bindtap="trimSilence" loading="{{trimming}}">裁剪静默</button>
       <button class="small-btn" bindtap="resetAudio">取消</button>
+    </view>
+    
+    <view class="trim-result" wx:if="{{trimResult}}">
+      <text class="trim-info">原始 {{trimResult.original_duration}}s → 裁剪后 {{trimResult.trimmed_duration}}s，节省 {{trimResult.saved_seconds}}s</text>
+      <view class="trim-actions">
+        <button class="small-btn primary" bindtap="transcribeTrimmed" loading="{{uploading}}">转为文字</button>
+        <button class="small-btn" bindtap="saveTrimmedAudio">保存音频</button>
+      </view>
     </view>
   </view>
 

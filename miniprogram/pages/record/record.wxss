@@ -340,3 +340,27 @@
   background: #27ae60;
   color: #fff;
 }
+
+.trim-result {
+  text-align: center;
+  margin-top: 20rpx;
+  padding: 16rpx;
+  background: #f0f9ff;
+  border-radius: 8rpx;
+}
+
+.trim-info {
+  font-size: 26rpx;
+  color: #4A90D9;
+  display: block;
+  margin-bottom: 16rpx;
+}
+
+.trim-actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.trim-actions .small-btn {
+  flex: 1;
+}

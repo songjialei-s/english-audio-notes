@@ -1,15 +1,23 @@
 """FastAPI 主入口 - 路由定义"""
 import shutil
 import uuid
+import subprocess
 from datetime import datetime
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import FileResponse, JSONResponse
 
-from backend.config import UPLOAD_DIR, AUDIO_DIR, RECORD_DIR
+from backend.config import UPLOAD_DIR, AUDIO_DIR, RECORD_DIR, TEMP_DIR
 from backend.pdf_parser import extract_text, split_into_segments
 from backend.tts import generate_audio, get_available_voices
 from backend.stt import transcribe_audio, get_supported_languages
 from backend.pdf_module import get_pdf_page_count
+
+# 获取 FFmpeg 路径
+try:
+    import imageio_ffmpeg
+    FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
+except:
+    FFMPEG_PATH = "ffmpeg"
 
 app = FastAPI(title="Document Audio Tool")
 
@@ -145,3 +153,95 @@ async def root():
 async def health():
     """服务健康检查"""
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
+
+
+@app.post("/trim-silence")
+async def trim_silence(
+    file: UploadFile = File(...),
+    silence_threshold: str = Form("-40"),
+    min_silence_duration: str = Form("5")
+):
+    """裁剪音频中的静默片段"""
+    try:
+        threshold_db = int(silence_threshold)
+        min_duration = float(min_silence_duration)
+
+        file_id = str(uuid.uuid4())[:8]
+        ext = file.filename.split(".")[-1] if "." in file.filename else "mp3"
+        input_path = str(RECORD_DIR / f"{file_id}_input.{ext}")
+        output_path = str(RECORD_DIR / f"{file_id}_trimmed.mp3")
+
+        # 保存上传文件
+        with open(input_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        original_size = RECORD_DIR / f"{file_id}_input.{ext}"
+        original_duration_cmd = [
+            FFMPEG_PATH, "-i", input_path,
+            "-f", "null", "-"
+        ]
+        result = subprocess.run(original_duration_cmd, capture_output=True, text=True)
+        # 从 stderr 解析时长
+        original_duration = 0
+        for line in result.stderr.split("\n"):
+            if "Duration:" in line:
+                parts = line.split("Duration:")[1].split(",")[0].strip()
+                h, m, s = parts.split(":")
+                original_duration = float(h) * 3600 + float(m) * 60 + float(s)
+                break
+
+        # FFmpeg silenceremove 滤镜
+        # 移除超过指定时长的静默片段，替换为0.3秒短停顿
+        af = (
+            f"silenceremove="
+            f"start_periods=1:"
+            f"start_duration=0.1:"
+            f"start_threshold={threshold_db}dB:"
+            f"stop_periods=-1:"
+            f"stop_duration={min_duration}:"
+            f"stop_threshold={threshold_db}dB,"
+            f"apad=pad_dur=0.3"
+        )
+
+        cmd = [
+            FFMPEG_PATH, "-i", input_path,
+            "-af", af,
+            "-y", output_path
+        ]
+
+        print(f"[TrimSilence] threshold={threshold_db}dB, min_duration={min_duration}s")
+        subprocess.run(cmd, capture_output=True, timeout=300)
+
+        if not __import__("os").path.exists(output_path):
+            return JSONResponse(status_code=500, content={"error": "裁剪失败"})
+
+        # 获取裁剪后时长
+        trimmed_duration = 0
+        result2 = subprocess.run(
+            [FFMPEG_PATH, "-i", output_path, "-f", "null", "-"],
+            capture_output=True, text=True
+        )
+        for line in result2.stderr.split("\n"):
+            if "Duration:" in line:
+                parts = line.split("Duration:")[1].split(",")[0].strip()
+                h, m, s = parts.split(":")
+                trimmed_duration = float(h) * 3600 + float(m) * 60 + float(s)
+                break
+
+        # 清理输入文件
+        __import__("os").remove(input_path)
+
+        saved = original_duration - trimmed_duration
+        print(f"[TrimSilence] Original: {original_duration:.1f}s, Trimmed: {trimmed_duration:.1f}s, Saved: {saved:.1f}s")
+
+        return {
+            "id": file_id,
+            "audio": f"/audio/{file_id}_trimmed.mp3",
+            "original_duration": round(original_duration, 1),
+            "trimmed_duration": round(trimmed_duration, 1),
+            "saved_seconds": round(saved, 1)
+        }
+
+    except Exception as e:
+        print(f"[TrimSilence] Error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
