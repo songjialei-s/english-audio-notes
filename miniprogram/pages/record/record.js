@@ -397,12 +397,13 @@ Page({
     let history = wx.getStorageSync('record_history') || []
     const now = new Date()
     const dateStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`
+    const title = this.data.fileName || `${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`
     const item = {
       id: Date.now(),
       date: dateStr,
       text: text,
       duration: this.data.durationText,
-      title: this.data.fileName || '录音'
+      title: title
     }
     history.unshift(item)
     if (history.length > 100) {
