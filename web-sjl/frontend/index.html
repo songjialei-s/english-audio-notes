@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Notes - 音频笔记</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <header class="header">
+                <h1>Audio Notes</h1>
+                <p>上传PDF朗读 / 录音转文字</p>
+            </header>
+
+            <nav class="tabs">
+                <button :class="{ active: tab === 'pdf' }" @click="tab = 'pdf'">听文档</button>
+                <button :class="{ active: tab === 'transcribe' }" @click="tab = 'transcribe'">转文字</button>
+                <button :class="{ active: tab === 'history' }" @click="tab = 'history'; loadHistory()">历史记录</button>
+            </nav>
+
+            <!-- PDF 朗读 -->
+            <div v-if="tab === 'pdf'" class="tab-content">
+                <div class="settings">
+                    <label>声音：
+                        <select v-model="voiceId">
+                            <option v-for="v in voices" :key="v.id" :value="v.id">{{ v.name }}</option>
+                        </select>
+                    </label>
+                    <label>语速：
+                        <select v-model.number="rate">
+                            <option :value="50">0.5x</option>
+                            <option :value="75">0.75x</option>
+                            <option :value="100">1x</option>
+                            <option :value="150">1.5x</option>
+                            <option :value="200">2x</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="upload-area" @click="$refs.pdfInput.click()" @dragover.prevent @drop.prevent="handlePdfDrop">
+                    <input ref="pdfInput" type="file" accept=".pdf" @change="handlePdf" hidden>
+                    <p>点击或拖拽 PDF 文件到这里</p>
+                </div>
+
+                <div v-if="pdfLoading" class="loading">处理中...</div>
+
+                <div v-if="pdfResult" class="result">
+                    <div class="segment" v-for="(seg, i) in pdfResult.segments" :key="i">
+                        <p class="segment-text">{{ seg.text }}</p>
+                        <audio :src="seg.audio" controls></audio>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 转文字 -->
+            <div v-if="tab === 'transcribe'" class="tab-content">
+                <div class="settings">
+                    <label>语言：
+                        <select v-model="language">
+                            <option v-for="(name, code) in languages" :key="code" :value="code">{{ name }}</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="upload-area" @click="$refs.mediaInput.click()" @dragover.prevent @drop.prevent="handleMediaDrop">
+                    <input ref="mediaInput" type="file" accept="audio/*,video/*" @change="handleMedia" hidden>
+                    <p>点击或拖拽 音频/视频 文件到这里</p>
+                </div>
+
+                <div v-if="transcribeLoading" class="loading">识别中...</div>
+
+                <div v-if="transcribeResult" class="result">
+                    <textarea v-model="transcribeResult" rows="10" readonly></textarea>
+                    <button class="btn" @click="copyText">复制全部</button>
+                </div>
+            </div>
+
+            <!-- 历史记录 -->
+            <div v-if="tab === 'history'" class="tab-content">
+                <div v-if="historyList.length === 0" class="empty">暂无历史记录</div>
+                <div v-for="item in historyList" :key="item.id" class="history-item">
+                    <div class="history-header">
+                        <span class="history-type">{{ item.type === 'pdf' ? 'PDF' : '转文字' }}</span>
+                        <span class="history-title">{{ item.title }}</span>
+                        <span class="history-date">{{ item.created_at }}</span>
+                    </div>
+                    <p class="history-content">{{ item.content ? item.content.substring(0, 100) + '...' : '' }}</p>
+                    <button class="btn-delete" @click="deleteHistory(item.id)">删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

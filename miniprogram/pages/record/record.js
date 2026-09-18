@@ -172,14 +172,32 @@ Page({
       timeout: 600000,
       success: (res) => {
         clearInterval(this._processTimer)
-        const data = JSON.parse(res.data)
-        this.setData({ resultText: data.text, uploading: false, uploadProgress: 0, processingText: '' })
-        wx.setClipboardData({ data: data.text })
+        this.setData({ uploading: false, uploadProgress: 0, processingText: '' })
+        try {
+          const data = JSON.parse(res.data)
+          if (res.statusCode < 200 || res.statusCode >= 300 || data.error) {
+            throw new Error(data.error || `服务器返回 HTTP ${res.statusCode}`)
+          }
+          if (typeof data.text !== 'string' || !data.text.trim()) {
+            throw new Error('未识别到文字，请确认音频中有清晰的人声。')
+          }
+          if (/^\[(ASR返回为空|StepFun ASR Error:|视频音频提取失败)/.test(data.text)) {
+            throw new Error(data.text)
+          }
+          this.setData({ resultText: data.text })
+          wx.setClipboardData({ data: data.text })
+        } catch (err) {
+          wx.showModal({ title: '识别失败', content: err.message || '服务器返回内容无法解析', showCancel: false })
+        }
       },
       fail: (err) => {
         clearInterval(this._processTimer)
         console.error('Upload error:', err)
-        wx.showToast({ title: '识别失败', icon: 'error' })
+        wx.showModal({
+          title: '上传失败',
+          content: `服务器：${app.globalData.baseUrl}\n${err.errMsg || '连接失败'}\n请确认后端已启动，并在听文档页面设置正确的服务器地址。`,
+          showCancel: false
+        })
         this.setData({ uploading: false, uploadProgress: 0, processingText: '' })
       }
     })

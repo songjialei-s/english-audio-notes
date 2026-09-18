@@ -1,4 +1,4 @@
-"""语音识别模块 - StepFun ASR + DeepSeek 纠错"""
+"""语音识别模块 - StepFun ASR 原文转写"""
 import base64
 import json
 import os
@@ -9,7 +9,6 @@ from concurrent.futures import ThreadPoolExecutor
 
 from backend.config import (
     STEP_API_KEY, STEP_BASE_URL,
-    DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL,
     MAX_BASE64_SIZE, CHUNK_SECONDS,
     VIDEO_EXTENSIONS, TEMP_DIR
 )
@@ -201,53 +200,6 @@ def _step_asr(audio_path: str, language: str = "auto") -> str:
         return f"[StepFun ASR Error: {e}]"
 
 
-def _deepseek_correct(raw_text: str) -> str:
-    """用 DeepSeek 纠正语音识别结果"""
-    if not raw_text or raw_text.startswith("["):
-        return raw_text
-
-    headers = {
-        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-    prompt = f"""你是会议记录纠错助手。语音识别了一段会议录音。
-
-【核心规则】
-1. 纠正明显的语音识别错误（同音词、近音词）
-2. 根据上下文理解专业术语并纠正
-3. 根据上下文补全标点符号
-4. 保持原文语言，不要翻译
-5. 适当整理格式，使其更易读
-
-【语音识别内容】
-{raw_text}
-
-【纠正后输出】"""
-
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [
-            {"role": "user", "content": prompt}
-        ],
-        "max_tokens": 8192,
-        "temperature": 0.1,
-    }
-
-    try:
-        resp = requests.post(
-            f"{DEEPSEEK_BASE_URL}/v1/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=120,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
-    except Exception:
-        return raw_text
-
-
 def _process_chunk(args):
     """处理单个分片（用于多线程）"""
     i, chunk, language = args
@@ -257,7 +209,7 @@ def _process_chunk(args):
 
 
 def transcribe_audio(audio_path: str, language: str = "auto") -> str:
-    """语音转文字主函数"""
+    """直接返回语音识别原文，不经过 LLM 总结、纠错或改写。"""
     work_path = audio_path
 
     # 如果是视频，先提取音频
@@ -278,7 +230,7 @@ def transcribe_audio(audio_path: str, language: str = "auto") -> str:
             os.remove(work_path)
         if not raw_text or raw_text.startswith("["):
             return raw_text if raw_text else "[ASR返回为空]"
-        return _deepseek_correct(raw_text)
+        return raw_text
 
     # 多片并行处理
     args = [(i, chunk, language) for i, chunk in enumerate(chunks)]
@@ -300,7 +252,7 @@ def transcribe_audio(audio_path: str, language: str = "auto") -> str:
         return "[ASR返回为空]"
 
     full_text = "\n".join(all_texts)
-    return _deepseek_correct(full_text)
+    return full_text
 
 
 def get_supported_languages() -> dict:

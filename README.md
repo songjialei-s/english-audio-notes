@@ -23,12 +23,13 @@ graph TB
         C[PDF 解析<br/>PyMuPDF + RapidOCR]
         D[语音合成<br/>edge-tts<br/>6种微软Neural声音]
         E[语音识别<br/>StepFun ASR<br/>自动压缩 + 分片 + 并发]
-        F[LLM 纠错<br/>DeepSeek<br/>双场景Prompt]
+        F[LLM 纠错<br/>DeepSeek<br/>PDF OCR纠错]
     end
 
     A1 --> B --> C --> D --> A1
-    A2 --> B --> E --> F --> A2
-    A3 --> B --> E --> F --> A3
+    A2 --> B --> E --> A2
+    A3 --> B --> E --> A3
+    C --> F
 ```
 
 ---
@@ -47,14 +48,14 @@ graph TB
 - 录音转文字（录音 / 暂停 / 继续 / 停止）
 - **视频上传自动提取音频**（MP4/MOV/AVI/MKV 等）
 - 自动检测中英文
-- **ASR → LLM 纠错 pipeline**（同音词纠正 + 标点补全）
+- **ASR 原文转写**：直接返回识别结果，保留原始表达，不总结、不改写
 - 历史记录（最近 100 条）
 
 ---
 
 ## 核心技术 Pipeline
 
-### ASR 纠错链路
+### ASR 原文转写链路
 
 ```
 音频/视频上传
@@ -65,11 +66,11 @@ graph TB
 │ 2. 大文件压缩 (MP3 16kHz mono 32kbps) │
 │ 3. 长音频分片 (10分钟/片)              │
 │ 4. 6线程并发 ASR (StepFun)            │
-│ 5. 分片结果合并 → DeepSeek 纠错        │
+│ 5. 分片结果按顺序合并 → 原文输出        │
 └──────────────────────────────────────┘
     │
     ▼
-  纠错后文本
+  录音识别原文
 ```
 
 ### 纠错效果对比
@@ -196,7 +197,7 @@ english-audio-notes/
 │   ├── pdf_module.py       # PDF 提取 (PyMuPDF + RapidOCR + LLM 纠错)
 │   ├── pdf_parser.py       # 文字分段处理
 │   ├── tts.py              # edge-tts 语音合成 (6 种声音 + 倍速)
-│   ├── stt.py              # StepFun ASR + 分片 + 并发 + DeepSeek 纠错
+│   ├── stt.py              # StepFun ASR + 分片 + 并发 + 原文输出
 │   ├── volcano_llm.py      # DeepSeek LLM 纠错 (Prompt 工程)
 │   ├── volcano_ocr.py      # 火山引擎 OCR (Vision LLM)
 │   └── text_corrector.py   # 本地纠错 (备用)
@@ -221,7 +222,7 @@ english-audio-notes/
 | TTS 引擎 | edge-tts vs pyttsx3 | edge-tts 免费调用微软 Neural 声音，音质远好于本地 SAPI5 |
 | ASR 方案 | StepFun vs 腾讯/阿里 ASR | StepFun 中英双语模型识别率高，API 简洁 |
 | OCR 方案 | RapidOCR + LLM vs 纯 OCR | 扫描件手写英文识别率低，加 LLM 后可纠正拼写和还原词组 |
-| 纠错策略 | 双 Prompt 分场景 | OCR 纠错 (词组还原) 和 ASR 纠错 (同音词) 需要不同的 Prompt 策略 |
+| 纠错策略 | 仅 PDF OCR 使用 LLM | 录音直接输出 ASR 原文，避免整理过程丢失内容 |
 | 音频处理 | FFmpeg 压缩分片 | > 7.5MB 音频压缩为 MP3 16kHz，长音频 10 分钟/片，6 线程并发 |
 | 并发模型 | ThreadPoolExecutor | ASR API 是 IO 密集型，多线程足够，不需要异步 |
 
